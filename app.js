@@ -99,13 +99,11 @@ async function start() {
       console.log(`🔐 Admin Panel      → http://localhost:${PORT}/admin`);
       console.log(`   Login: ${process.env.ADMIN_USER || 'admin'} / ${process.env.ADMIN_PASS || 'shopzone123'}\n`);
     });
-  } catch (err) {
-    console.error('❌ Unable to connect to the database:', err.message);
-    console.error('\n👉 Check your .env file — DB_HOST, DB_NAME, DB_USER, DB_PASS');
-    console.error('👉 Make sure MySQL server is running and the database exists.');
-    console.error('   You can create it with: CREATE DATABASE shopzone_db;\n');
-    process.exit(1);
-  }
+  }catch (err) {
+  console.error("DATABASE ERROR");
+  console.error(err);
+  process.exit(1);
+}
 }
 
 start();
