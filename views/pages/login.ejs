@@ -1,0 +1,49 @@
+<%- include('../partials/header') %>
+<div class="auth-wrap">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <img src="/images/logo.png" alt="ShopZone" style="height:40px;margin:0 auto 8px;">
+      <div class="logo-name" style="color:#131921;font-size:20px;">Shop<span style="color:#f90;">Zone</span></div>
+    </div>
+    <h1 class="auth-title" data-t="signInTitle">Sign In</h1>
+    <div class="form-group">
+      <label data-t="nameLabel">Full Name</label>
+      <input type="text" id="loginName" data-t-ph="namePlaceholder" placeholder="Enter your name">
+    </div>
+    <div class="form-group">
+      <label data-t="mobileLabel">Mobile Number</label>
+      <input type="tel" id="loginMobile" data-t-ph="mobilePlaceholder" placeholder="+91 Enter 10-digit number" maxlength="10">
+    </div>
+    <button class="submit-btn" onclick="startLogin()" data-t="continueBtn">Continue</button>
+    <div id="otpSection" style="display:none;margin-top:16px;">
+      <div id="otpDemo" style="background:#fff3cd;border:1px solid #f59e0b;border-radius:6px;padding:10px;margin-bottom:12px;font-size:13px;text-align:center;"></div>
+      <div class="form-group">
+        <label data-t="otpLabel">Enter OTP</label>
+        <input type="text" id="loginOtp" maxlength="6" placeholder="6-digit OTP" style="letter-spacing:6px;text-align:center;font-size:18px;">
+      </div>
+      <button class="submit-btn" onclick="verifyLogin()" data-t="verifyBtn">Verify & Login</button>
+    </div>
+    <div class="auth-link"><a href="/" data-t="continueShopping">← Continue Shopping</a></div>
+  </div>
+</div>
+<%- include('../partials/footer') %>
+<script>
+function startLogin() {
+  const name = document.getElementById('loginName').value.trim();
+  const mobile = document.getElementById('loginMobile').value.trim().replace(/\D/g,'');
+  const isHi = getLang() === 'hi';
+  if (!name) { alert(isHi?'कृपया नाम दर्ज करें':'Please enter your name'); return; }
+  if (mobile.length !== 10) { alert(isHi?'कृपया सही मोबाइल नंबर दर्ज करें':'Please enter a valid mobile number'); return; }
+  const otp = generateOTP(mobile);
+  document.getElementById('otpSection').style.display = 'block';
+  document.getElementById('otpDemo').innerHTML = `📱 <strong>${isHi?'डेमो OTP':'Demo OTP'}:</strong> <span style="font-size:20px;font-weight:800;letter-spacing:4px;">${otp}</span>`;
+}
+function verifyLogin() {
+  const otp = document.getElementById('loginOtp').value.trim();
+  const isHi = getLang() === 'hi';
+  if (!verifyOTP(otp)) { alert(isHi?'गलत OTP':'Invalid OTP'); return; }
+  loginUser(document.getElementById('loginName').value.trim(), sessionStorage.getItem('sz_otp_mobile'));
+  showToast(isHi?'✓ लॉगिन सफल!':'✓ Login successful!');
+  setTimeout(() => window.location.href = '/', 800);
+}
+</script>

@@ -1,0 +1,20 @@
+<%- include('../partials/header') %>
+<div class="page-wrap">
+  <div style="background:#fff;border-radius:8px;padding:32px;text-align:center;">
+    <div style="font-size:64px;margin-bottom:16px;">📦</div>
+    <h2 id="ordersTitle" style="font-size:22px;font-weight:700;margin-bottom:8px;">Your Orders</h2>
+    <p id="ordersSub" style="color:#565959;margin-bottom:20px;">Order history is not available in this version.</p>
+    <a href="/" style="background:#f90;color:#131921;padding:10px 24px;border-radius:6px;font-weight:700;font-size:14px;" id="shopLink">Continue Shopping</a>
+  </div>
+</div>
+<%- include('../partials/footer') %>
+<script>
+function updateOrdersLang() {
+  const isHi = getLang() === 'hi';
+  document.getElementById('ordersTitle').textContent = isHi ? 'आपके ऑर्डर' : 'Your Orders';
+  document.getElementById('ordersSub').textContent = isHi ? 'इस संस्करण में ऑर्डर इतिहास उपलब्ध नहीं है।' : 'Order history is not available in this version.';
+  document.getElementById('shopLink').textContent = isHi ? 'खरीदारी जारी रखें' : 'Continue Shopping';
+}
+updateOrdersLang();
+document.getElementById('langToggle').addEventListener('click', () => setTimeout(updateOrdersLang, 50));
+</script>

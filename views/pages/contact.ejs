@@ -1,0 +1,50 @@
+<%- include('../partials/header') %>
+<div class="page-wrap">
+  <div style="background:#fff;border-radius:8px;padding:32px;margin-bottom:20px;">
+    <h1 id="contactTitle" style="font-size:24px;font-weight:700;margin-bottom:8px;">Contact Us</h1>
+    <p id="contactSub" style="color:#565959;margin-bottom:24px;">We're here to help!</p>
+    <div class="info-grid" style="margin-bottom:24px;">
+      <div class="info-card"><div class="info-card-icon">📞</div><h3 id="c1h">Phone</h3><p>1800-XXX-XXXX<br><span id="c1p" style="font-size:12px;color:#565959;">Mon–Sat 9AM–9PM</span></p></div>
+      <div class="info-card"><div class="info-card-icon">📧</div><h3 id="c2h">Email</h3><p>support@shopzone.in<br><span id="c2p" style="font-size:12px;color:#565959;">Reply within 24 hours</span></p></div>
+      <div class="info-card"><div class="info-card-icon">💬</div><h3 id="c3h">Live Chat</h3><p><span id="c3p">Available on website<br>24 hours / 7 days</span></p></div>
+    </div>
+    <div style="background:#f7f7f7;border-radius:8px;padding:24px;">
+      <h3 id="feedbackTitle" style="font-size:16px;font-weight:700;margin-bottom:14px;">Send Feedback</h3>
+      <div class="form-group"><label id="nameLabel2">Name</label><input type="text" id="contactName" placeholder="Your name"></div>
+      <div class="form-group"><label id="emailLabel">Email</label><input type="email" id="contactEmail" placeholder="your@email.com"></div>
+      <div class="form-group"><label id="msgLabel">Message</label><textarea rows="4" id="contactMsg" placeholder="How can we help?" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:6px;font-size:14px;resize:none;outline:none;"></textarea></div>
+      <button onclick="sendFeedback()" class="submit-btn" id="sendBtn">Send Message</button>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>
+<script>
+function sendFeedback() {
+  const isHi = getLang() === 'hi';
+  const name = document.getElementById('contactName').value.trim();
+  const msg = document.getElementById('contactMsg').value.trim();
+  if (!name || !msg) { alert(isHi?'कृपया सभी फ़ील्ड भरें':'Please fill all fields'); return; }
+  showToast(isHi?'✓ संदेश भेजा गया! हम जल्द संपर्क करेंगे।':'✓ Message sent! We will contact you soon.');
+  document.getElementById('contactName').value='';
+  document.getElementById('contactEmail').value='';
+  document.getElementById('contactMsg').value='';
+}
+function updateContactLang() {
+  const isHi = getLang() === 'hi';
+  document.getElementById('contactTitle').textContent = isHi ? 'संपर्क करें' : 'Contact Us';
+  document.getElementById('contactSub').textContent = isHi ? 'हम यहाँ मदद के लिए हैं!' : "We're here to help!";
+  document.getElementById('c1h').textContent = isHi ? 'फोन' : 'Phone';
+  document.getElementById('c1p').textContent = isHi ? 'सोम–शनि सुबह 9 – रात 9' : 'Mon–Sat 9AM–9PM';
+  document.getElementById('c2h').textContent = isHi ? 'ईमेल' : 'Email';
+  document.getElementById('c2p').textContent = isHi ? '24 घंटे में जवाब' : 'Reply within 24 hours';
+  document.getElementById('c3h').textContent = isHi ? 'लाइव चैट' : 'Live Chat';
+  document.getElementById('c3p').textContent = isHi ? 'वेबसाइट पर उपलब्ध\n24 घंटे / 7 दिन' : 'Available on website\n24 hours / 7 days';
+  document.getElementById('feedbackTitle').textContent = isHi ? 'फीडबैक भेजें' : 'Send Feedback';
+  document.getElementById('nameLabel2').textContent = isHi ? 'नाम' : 'Name';
+  document.getElementById('emailLabel').textContent = isHi ? 'ईमेल' : 'Email';
+  document.getElementById('msgLabel').textContent = isHi ? 'संदेश' : 'Message';
+  document.getElementById('sendBtn').textContent = isHi ? 'संदेश भेजें' : 'Send Message';
+}
+updateContactLang();
+document.getElementById('langToggle').addEventListener('click', () => setTimeout(updateContactLang, 50));
+</script>

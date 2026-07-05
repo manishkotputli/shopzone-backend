@@ -1,0 +1,146 @@
+<%- include('../partials/header') %>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="/">Home</a><span>›</span>
+    <span id="catTitle"><%= cat %></span>
+  </div>
+
+  <div class="category-layout">
+    <!-- Filters -->
+    <div class="filter-box">
+      <div class="filter-title" id="filterTitle">Filters</div>
+      <div class="filter-group">
+        <h4 id="brandLabel">Brand</h4>
+        <div id="brandFilterList"></div>
+      </div>
+      <div class="filter-group">
+        <h4 id="priceRangeLabel">Price Range</h4>
+        <div class="price-range">
+          <input type="number" id="minPrice" placeholder="Min" min="0">
+          <span>–</span>
+          <input type="number" id="maxPrice" placeholder="Max">
+        </div>
+        <button onclick="applyFilters()" style="margin-top:10px;background:#f90;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;width:100%;" id="applyBtn">Apply</button>
+      </div>
+      <div class="filter-group">
+        <h4 id="ratingLabel">Customer Rating</h4>
+        <% [4,3,2,1].forEach(r=>{ %>
+          <label><input type="checkbox" class="ratingFilter" value="<%=r%>" onchange="applyFilters()"> <%=r%>★ & above</label>
+        <% }) %>
+      </div>
+      <div class="filter-group">
+        <h4 id="discountLabel">Discount</h4>
+        <% [70,50,40,30,10].forEach(d=>{ %>
+          <label><input type="checkbox" class="discFilter" value="<%=d%>" onchange="applyFilters()"> <%=d%>% or more</label>
+        <% }) %>
+      </div>
+    </div>
+
+    <!-- Products -->
+    <div>
+      <div class="sort-bar">
+        <span id="sortLabel">Sort by:</span>
+        <select id="sortSel" onchange="applyFilters()">
+          <option value="default">Featured</option>
+          <option value="priceLow">Price: Low to High</option>
+          <option value="priceHigh">Price: High to Low</option>
+          <option value="rating">Avg. Customer Review</option>
+          <option value="discount">Biggest Discount</option>
+        </select>
+        <span class="results-count" id="resultsCount"></span>
+      </div>
+      <div class="prod-grid" id="catProdGrid"><div style="padding:30px;color:#565959;">Loading...</div></div>
+      <div id="noProd" style="display:none;text-align:center;padding:40px;background:#fff;border-radius:8px;margin-top:14px;">
+        <div style="font-size:48px;margin-bottom:12px;">🔍</div>
+        <h3 id="noProdMsg">No products found</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
+
+<script>
+const CAT = '<%= cat %>';
+let ALL_BRANDS = [];
+
+async function loadBrandFilters() {
+  const prods = await fetchProducts({ category: CAT === 'All' ? undefined : CAT });
+  ALL_BRANDS = [...new Set(prods.map(p => p.brand).filter(Boolean))].sort();
+  document.getElementById('brandFilterList').innerHTML = ALL_BRANDS.map(b =>
+    `<label><input type="checkbox" class="brandFilter" value="${b}" onchange="applyFilters()"> ${b}</label>`
+  ).join('') || '<span style="font-size:12px;color:#999;">No brands</span>';
+}
+
+async function applyFilters() {
+  const isHi = getLang() === 'hi';
+  const params = {};
+  if (CAT && CAT !== 'All') params.category = CAT;
+
+  const minP = document.getElementById('minPrice').value;
+  const maxP = document.getElementById('maxPrice').value;
+  if (minP) params.minPrice = minP;
+  if (maxP) params.maxPrice = maxP;
+
+  const ratings = [...document.querySelectorAll('.ratingFilter:checked')].map(x=>+x.value);
+  if (ratings.length) params.minRating = Math.min(...ratings);
+
+  const discs = [...document.querySelectorAll('.discFilter:checked')].map(x=>+x.value);
+  if (discs.length) params.minDiscount = Math.min(...discs);
+
+  const sort = document.getElementById('sortSel').value;
+  if (sort !== 'default') params.sort = sort;
+
+  let prods = await fetchProducts(params);
+
+  // Brand filter (client-side, multi-select OR)
+  const brands = [...document.querySelectorAll('.brandFilter:checked')].map(x=>x.value);
+  if (brands.length) prods = prods.filter(p => brands.includes(p.brand));
+
+  const grid = document.getElementById('catProdGrid');
+  const noProd = document.getElementById('noProd');
+  document.getElementById('resultsCount').textContent = (isHi ? `${prods.length} परिणाम` : `${prods.length} results`);
+
+  if (!prods.length) { grid.innerHTML=''; noProd.style.display='block'; return; }
+  noProd.style.display='none';
+
+  grid.innerHTML = prods.map(raw => {
+    const p = normalizeProduct(raw);
+    const img = p.image_url ? `<img src="${p.image_url}" alt="${p.name}" style="max-width:100%;max-height:100%;object-fit:contain;">` : (p.emoji||'📦');
+    const badge = p.badge ? `<div class="prod-badge ${p.badge.toLowerCase()}">${p.badge}</div>`
+      : p.save ? `<div class="prod-badge">-${p.save}%</div>` : '';
+    return `<div class="prod-card">
+      ${badge}
+      <a href="/product?id=${p.id}"><div class="prod-img-wrap">${img}</div></a>
+      <div class="prod-body">
+        <div class="prod-brand">${p.brand||''}</div>
+        <a href="/product?id=${p.id}"><div class="prod-name">${p.name}</div></a>
+        <div class="rating-row"><span class="stars">${'★'.repeat(Math.floor(p.rating||4))}</span><span class="rating-count">(${(p.reviews||0).toLocaleString()})</span></div>
+        <div class="price-row">
+          <span class="price">₹${p.price.toLocaleString('en-IN')}</span>
+          ${p.orig?`<span class="price-orig">₹${p.orig.toLocaleString('en-IN')}</span>`:''}
+          ${p.save?`<span class="price-save">-${p.save}%</span>`:''}
+        </div>
+        <div class="prime-badge"><span>prime</span><small>${isHi?'मुफ्त डिलीवरी':'FREE Delivery'}</small></div>
+        <button class="add-cart-btn" onclick="addToCart(${p.id},'${p.name.replace(/'/g,"\\'")}',${p.price})">${isHi?'कार्ट में जोड़ें':'Add to Cart'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateCatLang() {
+  const isHi = getLang() === 'hi';
+  document.getElementById('catTitle').textContent = isHi ? (CAT==='Electronics'?'इलेक्ट्रॉनिक्स':CAT==='Fashion'?'फैशन':CAT==='Home'?'घर और रसोई':CAT) : CAT;
+  document.getElementById('filterTitle').textContent = isHi ? 'फ़िल्टर' : 'Filters';
+  document.getElementById('brandLabel').textContent = isHi ? 'ब्रांड' : 'Brand';
+  document.getElementById('priceRangeLabel').textContent = isHi ? 'मूल्य सीमा' : 'Price Range';
+  document.getElementById('applyBtn').textContent = isHi ? 'लागू करें' : 'Apply';
+  document.getElementById('ratingLabel').textContent = isHi ? 'ग्राहक रेटिंग' : 'Customer Rating';
+  document.getElementById('discountLabel').textContent = isHi ? 'छूट' : 'Discount';
+  document.getElementById('sortLabel').textContent = isHi ? 'इसके अनुसार क्रमबद्ध:' : 'Sort by:';
+}
+
+(async () => { await loadBrandFilters(); await applyFilters(); updateCatLang(); })();
+document.getElementById('langToggle').addEventListener('click', () => setTimeout(() => { applyFilters(); updateCatLang(); }, 50));
+</script>

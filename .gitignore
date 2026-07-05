@@ -1,0 +1,6 @@
+node_modules/
+.env
+public/uploads/products/*
+public/uploads/qr/*
+!public/uploads/products/.gitkeep
+!public/uploads/qr/.gitkeep

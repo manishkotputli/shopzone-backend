@@ -1,0 +1,59 @@
+<%- include('../partials/header') %>
+
+<div class="page-wrap">
+  <div id="searchResults"><div style="padding:30px;color:#565959;">Loading...</div></div>
+</div>
+
+<%- include('../partials/footer') %>
+
+<script>
+const Q = '<%= q %>';
+
+async function renderSearch() {
+  const isHi = getLang() === 'hi';
+  const results = await fetchProducts(Q ? { search: Q } : {});
+
+  const title = Q
+    ? (isHi ? `"${Q}" के लिए ${results.length} परिणाम` : `${results.length} results for "${Q}"`)
+    : (isHi ? 'सभी उत्पाद' : 'All Products');
+
+  document.getElementById('searchResults').innerHTML = `
+    <div style="padding:16px 0 8px;">
+      <h1 style="font-size:18px;font-weight:400;">${title}</h1>
+    </div>
+    ${results.length ? `
+    <div class="prod-grid">
+      ${results.map(raw => {
+        const p = normalizeProduct(raw);
+        const img = p.image_url ? `<img src="${p.image_url}" alt="${p.name}" style="max-width:100%;max-height:100%;object-fit:contain;">` : (p.emoji||'📦');
+        const badge = p.badge ? `<div class="prod-badge ${p.badge.toLowerCase()}">${p.badge}</div>`
+          : p.save ? `<div class="prod-badge">-${p.save}%</div>` : '';
+        return `<div class="prod-card">
+          ${badge}
+          <a href="/product?id=${p.id}"><div class="prod-img-wrap">${img}</div></a>
+          <div class="prod-body">
+            <div class="prod-brand">${p.brand||''}</div>
+            <a href="/product?id=${p.id}"><div class="prod-name">${p.name}</div></a>
+            <div class="rating-row"><span class="stars">${'★'.repeat(Math.floor(p.rating||4))}</span><span class="rating-count">(${(p.reviews||0).toLocaleString()})</span></div>
+            <div class="price-row">
+              <span class="price">₹${p.price.toLocaleString('en-IN')}</span>
+              ${p.orig?`<span class="price-orig">₹${p.orig.toLocaleString('en-IN')}</span>`:''}
+            </div>
+            <div class="prime-badge"><span>prime</span><small>${isHi?'मुफ्त डिलीवरी':'FREE Delivery'}</small></div>
+            <button class="add-cart-btn" onclick="addToCart(${p.id},'${p.name.replace(/'/g,"\\'")}',${p.price})">${isHi?'कार्ट में जोड़ें':'Add to Cart'}</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : `
+    <div style="text-align:center;padding:60px;background:#fff;border-radius:8px;">
+      <div style="font-size:64px;margin-bottom:16px;">🔍</div>
+      <h2>${isHi?'कोई परिणाम नहीं मिला':'No results found'}</h2>
+      <p style="color:#565959;margin-top:8px;">${isHi?'कृपया दूसरे शब्द आज़माएं':'Try different search terms'}</p>
+      <a href="/" style="display:inline-block;margin-top:16px;background:#f90;color:#131921;padding:10px 24px;border-radius:6px;font-weight:700;">${isHi?'होमपेज पर जाएं':'Go to Homepage'}</a>
+    </div>`}
+  `;
+}
+
+renderSearch();
+document.getElementById('langToggle').addEventListener('click', () => setTimeout(renderSearch, 50));
+</script>

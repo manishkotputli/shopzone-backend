@@ -1,0 +1,592 @@
+<%- include('../partials/header') %>
+
+<div class="page-wrap">
+  <!-- 3-step progress bar -->
+  <div class="checkout-steps" id="checkoutSteps"></div>
+
+  <div id="stepContent"></div>
+</div>
+
+<style>
+  .progress{
+    height:8px;
+    background:#eee;
+    border-radius:20px;
+    overflow:hidden;
+    margin-top:20px;
+}
+
+.progress-fill{
+    width:0%;
+    height:100%;
+    background:linear-gradient(90deg,#ff9900,#ffc107);
+    transition:width 1s linear;
+}
+.stdone::before{
+    content:"✔";
+    display:inline-flex;
+    justify-content:center;
+    align-items:center;
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    background:#28a745;
+    color:#fff;
+    margin-right:8px;
+    animation:pop .35s;
+}
+
+@keyframes pop{
+    0%{transform:scale(0);}
+    70%{transform:scale(1.2);}
+    100%{transform:scale(1);}
+}
+.loader{
+    box-shadow:0 0 25px rgba(255,153,0,.45);
+}
+
+  #paymentProcessing{
+    position:fixed;
+    inset:0;
+    background:rgba(255,255,255,.96);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    z-index:999999;
+}
+
+.payment-processing-box{
+    width:420px;
+    max-width:95%;
+    background:#fff;
+    padding:30px;
+    border-radius:10px;
+    text-align:center;
+    box-shadow:0 10px 40px rgba(0,0,0,.15);
+}
+
+.loader{
+    width:70px;
+    height:70px;
+    border:6px solid #eee;
+    border-top:6px solid #ff9900;
+    border-radius:50%;
+    animation:spin 1s linear infinite;
+    margin:auto;
+}
+
+@keyframes spin{
+    to{
+        transform:rotate(360deg);
+    }
+}
+
+.processing-steps{
+    margin-top:25px;
+    text-align:left;
+    font-size:14px;
+    line-height:2;
+}
+.processing-steps div{
+    opacity:.35;
+    transform:translateX(-15px);
+    transition:.45s ease;
+}
+
+.processing-steps div.active{
+    opacity:1;
+    transform:translateX(0);
+    color:#ff9900;
+    font-weight:600;
+}
+
+.processing-steps div.done{
+    opacity:1;
+    color:#28a745;
+    font-weight:600;
+}
+</style>
+<div id="paymentProcessing" style="display:none;">
+  <div class="payment-processing-box">
+    <div class="loader"></div>
+
+    <h2 id="processingTitle">Verifying Payment...</h2>
+
+    <p id="processingMsg">
+      Please do not close this page.<br>
+      We are securely verifying your payment.
+    </p>
+
+    <div class="processing-steps">
+      <div id="s1">✓ Payment request received</div>
+      <div id="s2">⏳ Checking payment status...</div>
+      <div id="s3">Waiting for bank confirmation...</div>
+      <div id="s4">Finalizing your order...</div>
+    </div>
+
+    <div style="margin-top:18px;font-size:13px;">
+      Estimated time: <span id="countdown">50</span>s
+      
+    </div>
+    <div class="progress">
+    <div class="progress-fill" id="progressFill"></div>
+</div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
+
+<script>
+let STEP = 1; // 1=Address 2=Payment 3=Confirm
+let ADDRESS_DATA = {};
+let SITE_CFG = {};
+
+const STEPS_EN = ['Address','Payment','Order Confirm'];
+const STEPS_HI = ['पता','भुगतान','ऑर्डर कन्फर्म करें'];
+
+function renderSteps(active){
+  const isHi=getLang()==='hi';
+  const labels=isHi?STEPS_HI:STEPS_EN;
+  let html='';
+  labels.forEach((lbl,i)=>{
+    const n=i+1;
+    const state = n<active?'done':n===active?'active':'pending';
+    html+=`<div class="step-item">
+      <div class="step-circle ${state}">${state==='done'?'✓':n}</div>
+      <div class="step-lbl ${state}">${lbl}</div>
+    </div>`;
+    if(i<labels.length-1){
+      html+=`<div class="step-connector ${n<active?'done':''}"></div>`;
+    }
+  });
+  document.getElementById('checkoutSteps').innerHTML=html;
+}
+
+/* ══════════════ STEP 1 — ADDRESS ══════════════ */
+function renderAddress(){
+  const isHi=getLang()==='hi';
+  const user=getUser();
+  document.getElementById('stepContent').innerHTML=`
+  <div class="checkout-layout">
+    <div>
+      <div class="checkout-box">
+        <h3>${isHi?'अपने शिपिंग पते में बदलाव करें':'Delivery Address'}</h3>
+
+        <div class="form-group">
+          <label>${isHi?'देश/क्षेत्र':'Country/Region'}</label>
+          <select id="coCountry">
+            <option value="India" selected>India</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>${isHi?'पूरा नाम (प्रथम और अंतिम नाम)':'Full Name (First and Last)'}</label>
+          <input type="text" id="coName" placeholder="${isHi?'अपना पूरा नाम दर्ज करें':'Enter your full name'}" value="${user?user.name:''}">
+        </div>
+
+        <div class="form-group">
+          <label>${isHi?'मोबाइल नंबर':'Mobile Number'}</label>
+          <input type="tel" id="coMobile" maxlength="10" placeholder="${isHi?'10 अंकों का मोबाइल नंबर':'10-digit mobile number'}" value="${user?user.mobile:''}">
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">${isHi?'डिलीवरी में सहायता के लिए इस्तेमाल किया जा सकता है':'May be used to assist delivery'}</div>
+        </div>
+
+        <div class="form-group">
+          <label>${isHi?'मकान/फ्लैट नंबर, बिल्डिंग, कंपनी, अपार्टमेंट':'House/Flat No., Building, Company, Apartment'}</label>
+          <input type="text" id="coAddr1" placeholder="${isHi?'मकान/फ्लैट नंबर':'House/Flat No.'}">
+        </div>
+
+        <div class="form-group">
+          <label>${isHi?'इलाका, कॉलोनी, गांव, सड़क, सेक्टर':'Area, Colony, Village, Road, Sector'}</label>
+          <input type="text" id="coAddr2" placeholder="${isHi?'कॉलोनी/सेक्टर/गांव':'Colony / Sector / Village'}">
+        </div>
+
+        <div class="form-group">
+          <label>${isHi?'लैंडमार्क':'Landmark'}</label>
+          <input type="text" id="coLandmark" placeholder="${isHi?'उदाहरण के लिए, अपोलो अस्पताल के पास':'e.g. Near Apollo Hospital'}">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>${isHi?'पिनकोड':'Pincode'}</label>
+            <input type="text" id="coPincode" maxlength="6" placeholder="${isHi?'6 अंक का पिनकोड':'6-digit pincode'}" oninput="fetchPin(this.value)">
+          </div>
+          <div class="form-group">
+            <label>${isHi?'कस्बा/शहर':'Town/City'}</label>
+            <input type="text" id="coCity" placeholder="${isHi?'शहर':'City'}">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>${isHi?'राज्य':'State'}</label>
+          <select id="coState">
+            <option value="">-- ${isHi?'राज्य चुनें':'Select State'} --</option>
+            ${['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Delhi','Jammu & Kashmir','Ladakh'].map(s=>`<option value="${s}">${s}</option>`).join('')}
+          </select>
+        </div>
+
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px;cursor:pointer;">
+          <input type="checkbox" checked style="accent-color:var(--accent2);"> 
+          ${isHi?'इसे मेरा मुख्य पता बनाएं':'Make this my default address'}
+        </label>
+      </div>
+    </div>
+    <!-- Order summary sidebar -->
+    <div>${renderOrderSummaryHTML(isHi)}</div>
+  </div>
+
+  <div style="padding-bottom:16px;">
+    <button onclick="goToPayment()" class="checkout-btn" style="max-width:400px;display:block;">
+      ${isHi?'इस पते का इस्तेमाल करें':'Use this address'}
+    </button>
+  </div>
+  `;
+}
+
+async function goToPayment(){
+  const isHi=getLang()==='hi';
+  const name=document.getElementById('coName').value.trim();
+  const mobile=document.getElementById('coMobile').value.trim();
+  const addr1=document.getElementById('coAddr1').value.trim();
+  const pin=document.getElementById('coPincode').value.trim();
+
+  if(!name||!mobile||!addr1||!pin){
+    alert(isHi?'कृपया सभी आवश्यक फ़ील्ड भरें':'Please fill all required fields'); return;
+  }
+  if(mobile.length!==10){ alert(isHi?'सही मोबाइल नंबर दर्ज करें':'Enter valid mobile number'); return; }
+  if(!isLoggedIn()){ showAuthPopup(()=>goToPayment()); return; }
+
+  ADDRESS_DATA = {
+    name, mobile,
+    addr1, addr2: document.getElementById('coAddr2').value.trim(),
+    landmark: document.getElementById('coLandmark').value.trim(),
+    pincode: pin,
+    city: document.getElementById('coCity').value.trim(),
+    state: document.getElementById('coState').value,
+    country: 'India'
+  };
+  SITE_CFG = await fetchSiteConfig();
+  STEP=2; renderSteps(2); renderPayment();
+}
+
+async function fetchPin(v){
+  if(v.length!==6) return;
+  try{
+    const r=await fetch(`https://api.postalpincode.in/pincode/${v}`);
+    const d=await r.json();
+    if(d[0]?.Status==='Success'){
+      const po=d[0].PostOffice[0];
+      document.getElementById('coCity').value=po.Division||po.District;
+      document.getElementById('coState').value=po.State;
+      showToast(getLang()==='hi'?'📍 लोकेशन भरी गई!':'📍 Location auto-filled!');
+    }
+  }catch{ /* offline fallback */ }
+}
+
+function buildUpiLink({upiId, storeName, total, orderId}){
+  return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(storeName)}&am=${encodeURIComponent(total)}&cu=INR&tn=Order-${encodeURIComponent(orderId)}`;
+}
+/* ══════════════ STEP 2 — PAYMENT ══════════════ */
+function renderPayment(){
+  const isHi=getLang()==='hi';
+  const cfg=SITE_CFG;
+
+  // Build QR src — uploaded image OR auto-generate from UPI ID
+let qrSrc = "";
+
+const upiId = cfg.upi_id;
+const storeName = cfg.upi_name || "ShopZone";
+
+const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+const total = cart.reduce((sum, item) => {
+    return sum + (Number(item.price) * Number(item.qty));
+}, 0);
+
+const orderId = "ORD-" + Date.now();
+
+if (upiId) {
+
+    const upiLink = buildUpiLink({
+        upiId,
+        storeName,
+        total,
+        orderId
+    });
+
+    qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiLink)}`;
+
+} else if (cfg.qr_image) {
+
+    // sirf jab UPI ID na ho
+    qrSrc = cfg.qr_image;
+
+}
+
+  const delivDate=new Date(); delivDate.setDate(delivDate.getDate()+7);
+  const delivStr=delivDate.toLocaleDateString(isHi?'hi-IN':'en-IN',{weekday:'long',day:'numeric',month:'long'});
+
+  document.getElementById('stepContent').innerHTML=`
+  <div class="checkout-layout">
+    <div>
+      <!-- Delivery address recap -->
+      <div class="checkout-box" style="background:#f0f8f0;border:1.5px solid #c3e6cb;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <strong style="font-size:14px;">✓ ${ADDRESS_DATA.name} ${isHi?'को डिलीवर किया जा रहा है':'will be delivered to'}</strong>
+          <button onclick="STEP=1;renderSteps(1);renderAddress();" style="color:var(--link);background:none;border:none;font-size:13px;cursor:pointer;">${isHi?'डिलीवरी का पता बदलें':'Change'}</button>
+        </div>
+        <div style="font-size:13px;color:#333;">${ADDRESS_DATA.addr1}${ADDRESS_DATA.addr2?', '+ADDRESS_DATA.addr2:''}, ${ADDRESS_DATA.city}, ${ADDRESS_DATA.state}, ${ADDRESS_DATA.pincode}</div>
+      </div>
+
+      <!-- Payment options -->
+      <div class="checkout-box">
+        <h3>${isHi?'भुगतान विधि चुनें':'Select Payment Method'}</h3>
+        <div style="font-size:13px;color:var(--green);margin-bottom:12px;">✓ ${isHi?`ऑफर के साथ ₹23 तक की बचत करें`:'Save upto ₹23 with offers'}</div>
+
+        <!-- UPI section -->
+        <div style="margin-bottom:8px;font-size:12px;font-weight:700;color:var(--muted);">UPI</div>
+        <div class="pay-option-box">
+          <!-- Scan QR -->
+          <div class="pay-opt-row ${PAYMENT_METHOD==='qr'?'selected':''}" onclick="selectPayMethod('qr',this)">
+            <input type="radio" class="pay-opt-radio" name="pay" ${PAYMENT_METHOD==='qr'?'checked':''}>
+            <span class="pay-opt-label">${isHi?'Scan QR Code':'Scan QR Code'}</span>
+            <span class="pay-opt-icon">📷</span>
+          </div>
+          ${PAYMENT_METHOD==='qr'?`
+          <div class="upi-sub">
+            ${qrSrc?`<div class="qr-box"><img src="${qrSrc}" alt="UPI QR"><div style="font-size:11px;color:var(--muted);">${cfg.upi_id||''}</div></div>`:'<div style="padding:20px;color:var(--muted);font-size:13px;">No QR configured. Please enter UPI ID below.</div>'}
+          </div>`:''}
+
+          <!-- PhonePe -->
+          <div class="pay-opt-row ${PAYMENT_METHOD==='phonepe'?'selected':''}" onclick="selectPayMethod('phonepe',this)">
+            <input type="radio" class="pay-opt-radio" name="pay" ${PAYMENT_METHOD==='phonepe'?'checked':''}>
+            <span class="pay-opt-label">PhonePe</span>
+            <span class="pay-opt-icon">🟣</span>
+          </div>
+          ${PAYMENT_METHOD==='phonepe'?`
+          <div class="upi-sub">
+            <div style="font-size:13px;margin-bottom:8px;">${isHi?'PhonePe UPI ID पर भुगतान करें:':'Pay to PhonePe UPI ID:'} <strong>${cfg.phonepe_upi||cfg.upi_id||''}</strong></div>
+            <div style="font-size:12px;color:var(--muted);">${isHi?'PhonePe ऐप खोलें → Scan & Pay → ऊपर दिया गया UPI ID दर्ज करें':'Open PhonePe app → Pay/Transfer → Enter UPI ID above'}</div>
+          </div>`:''}
+
+          <!-- Any UPI App -->
+          <div class="pay-opt-row ${PAYMENT_METHOD==='upi'?'selected':''}" onclick="selectPayMethod('upi',this)">
+            <input type="radio" class="pay-opt-radio" name="pay" ${PAYMENT_METHOD==='upi'?'checked':''}>
+            <div>
+              <div class="pay-opt-label">${isHi?'किसी भी UPI ऐप से भुगतान करें':'Pay via any UPI App'}</div>
+              <div style="font-size:11px;color:var(--muted);">Google Pay, PhonePe, Paytm ${isHi?'और बहुत कुछ':'and more'}</div>
+            </div>
+            <span style="font-size:10px;font-weight:700;background:#4a90e2;color:#fff;padding:2px 6px;border-radius:3px;">UPI</span>
+          </div>
+          ${PAYMENT_METHOD==='upi'?`
+          <div class="upi-sub">
+            <div class="form-group" style="margin-bottom:8px;">
+              <label style="font-size:12px;">${isHi?'UPI ID दर्ज करें:':'Enter your UPI ID:'}</label>
+              <input type="text" id="upiIdInput" placeholder="yourname@upi" style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:4px;font-size:13px;">
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">${isHi?'या किसी ऐप से भुगतान करें:':'Or pay using:'} <strong>${cfg.upi_id||''}</strong></div>
+            <div class="upi-apps-row">
+              ${[['Google Pay','🟢'],['PhonePe','🟣'],['Paytm','💙'],['BHIM','🇮🇳']].map(([a,ic])=>`<button class="upi-app-btn" onclick="handleUpiAppPay('${a}')">${ic} ${a}</button>`).join('')}
+            </div>
+          </div>`:''}
+        </div>
+
+        <!-- Credit/Debit Cards (unavailable) -->
+        <div style="margin:10px 0 6px;font-size:12px;font-weight:700;color:var(--muted);">CREDIT & DEBIT CARDS</div>
+        <div class="pay-option-box">
+          <div class="pay-opt-row pay-opt-unavail" onclick="showUnavail()">
+            <input type="radio" class="pay-opt-radio" disabled>
+            <span class="pay-opt-label">${isHi?'नया क्रेडिट या डेबिट कार्ड जोड़ें':'Add new Credit or Debit Card'}</span>
+          </div>
+        </div>
+
+        <!-- More ways -->
+        <div style="margin:10px 0 6px;font-size:12px;font-weight:700;color:var(--muted);">MORE WAYS TO PAY</div>
+        <div class="pay-option-box">
+          ${[
+            [isHi?'Amazon Pay बैलेंस':'Amazon Pay Balance','💳'],
+            ['EMI','📊'],
+            [isHi?'नेट बैंकिंग':'Net Banking','🏦'],
+            [isHi?'डिलीवरी पर कैश से भुगतान करें':'Cash on Delivery','💵']
+          ].map(([lbl,ic])=>`
+          <div class="pay-opt-row pay-opt-unavail" onclick="showUnavail()">
+            <input type="radio" class="pay-opt-radio" disabled>
+            <div><div class="pay-opt-label">${lbl}</div><div style="font-size:11px;color:var(--muted);">${isHi?'इस भुगतान के लिए अनुपलब्ध है':'Unavailable for this order'}</div></div>
+            <span class="pay-opt-icon">${ic}</span>
+          </div>`).join('')}
+        </div>
+
+        <!-- Pay status -->
+        <div id="payStatus" class="pay-status"></div>
+      </div>
+    </div>
+
+    <!-- Order summary -->
+    <div>${renderOrderSummaryHTML(isHi,delivStr)}</div>
+  </div>
+
+  <div style="padding-bottom:16px;">
+    <button onclick="proceedPay()" class="checkout-btn" style="max-width:400px;display:block;">
+      ${isHi?'आगे बढ़ें':'Continue'}
+    </button>
+  </div>
+  `;
+}
+
+let PAYMENT_METHOD='qr'; // default
+
+function selectPayMethod(method, el){
+  PAYMENT_METHOD=method;
+  renderPayment();
+}
+
+function showUnavail(){
+  const isHi=getLang()==='hi';
+  showToast(isHi?'⚠️ यह भुगतान विधि अनुपलब्ध है':'⚠️ This payment method is unavailable');
+}
+
+function handleUpiAppPay(app){
+  simulatePayment(app);
+}
+
+function proceedPay(){
+  const isHi=getLang()==='hi';
+  if(PAYMENT_METHOD==='upi'){
+    const id=document.getElementById('upiIdInput')?.value.trim();
+    if(!id){ showToast(isHi?'कृपया UPI ID दर्ज करें':'Please enter your UPI ID'); return; }
+  }
+  simulatePayment(PAYMENT_METHOD);
+}
+
+
+function simulatePayment(method) {
+    const isHi = getLang() === "hi";
+
+    // Show popup
+    document.getElementById("paymentProcessing").style.display = "flex";
+
+    let timeLeft = 50;
+
+    const countdown = document.getElementById("countdown");
+    const progressFill = document.getElementById("progressFill");
+
+    const s1 = document.getElementById("s1");
+    const s2 = document.getElementById("s2");
+    const s3 = document.getElementById("s3");
+    const s4 = document.getElementById("s4");
+
+    // Reset texts
+    s1.innerHTML = "✓ Payment request received";
+    s2.innerHTML = "⏳ Checking payment status...";
+    s3.innerHTML = "Waiting for bank confirmation...";
+    s4.innerHTML = "Finalizing your order...";
+
+    countdown.textContent = timeLeft;
+    progressFill.style.width = "0%";
+
+    // Step elements
+    const steps = [s1, s2, s3, s4];
+
+    function activateStep(i) {
+        steps.forEach((step, index) => {
+            step.classList.remove("active", "stdone");
+
+            if (index < i) {
+                step.classList.add("done");
+            } else if (index === i) {
+                step.classList.add("active");
+            }
+        });
+    }
+
+    // Start with first step active
+    activateStep(0);
+
+    const timer = setInterval(() => {
+
+        timeLeft--;
+        countdown.textContent = timeLeft;
+
+        // Progress Bar
+        const percent = ((50 - timeLeft) / 50) * 100;
+        progressFill.style.width = percent + "%";
+
+        // Step 2
+        if (timeLeft === 40) {
+            s2.innerHTML = "✓ Checking payment status";
+            s3.innerHTML = "⏳ Waiting for bank confirmation...";
+            activateStep(1);
+        }
+
+        // Step 3
+        if (timeLeft === 20) {
+            s3.innerHTML = "✓ Bank confirmed payment";
+            s4.innerHTML = "⏳ Finalizing your order...";
+            activateStep(2);
+        }
+
+        // Step 4
+        if (timeLeft === 5) {
+            activateStep(3);
+        }
+
+        // Finish
+        if (timeLeft <= 0) {
+
+            clearInterval(timer);
+
+            progressFill.style.width = "100%";
+
+            s4.innerHTML = "✓ Order finalized";
+            activateStep(4);
+
+            localStorage.removeItem("cart");
+            updateCartCount();
+
+            setTimeout(() => {
+                window.location.href = "/order-success";
+            }, 1200);
+        }
+
+    }, 1000);
+}
+
+
+/* ══════════════ ORDER SUMMARY HTML (shared sidebar) ══════════════ */
+function renderOrderSummaryHTML(isHi, delivStr){
+  const cart=JSON.parse(localStorage.getItem('cart')||'[]');
+  let subtotal=0;
+  cart.forEach(i=>subtotal+=i.price*i.qty);
+  return `
+  <div class="order-summary" style="position:sticky;top:80px;">
+    <h3>${isHi?'ऑर्डर सारांश':'Order Summary'}</h3>
+    <div style="margin-bottom:12px;max-height:200px;overflow-y:auto;">
+      ${cart.map(i=>`
+        <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #f5f5f5;font-size:12px;">
+          <div style="flex:1;line-height:1.4;">${i.name.substring(0,35)}${i.name.length>35?'...':''}${i.variant?`<br><span style="color:var(--muted);">${i.variant}</span>`:''} x${i.qty}</div>
+          <div style="font-weight:600;">₹${(i.price*i.qty).toLocaleString('en-IN')}</div>
+        </div>`).join('')}
+    </div>
+    <div class="summary-row"><span>${isHi?'उप-कुल':'Subtotal'}</span><span>₹${subtotal.toLocaleString('en-IN')}</span></div>
+    <div class="summary-row"><span>${isHi?'डिलीवरी':'Delivery'}</span><span style="color:var(--green);">FREE</span></div>
+    <div class="summary-row summary-total"><span>${isHi?'कुल':'Total'}</span><span>₹${subtotal.toLocaleString('en-IN')}</span></div>
+    ${delivStr?`<div style="font-size:12px;color:var(--green);margin-top:8px;">📦 ${isHi?'डिलीवरी:':'Delivery:'} ${delivStr}</div>`:''}
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:10px;">🔒 ${isHi?'256-बिट SSL एन्क्रिप्शन':'256-bit SSL Encryption'}</div>
+  </div>`;
+}
+
+/* ══════════════ INIT ══════════════ */
+(async()=>{
+  if(!isLoggedIn()){
+    showAuthPopup(()=>{ renderSteps(1); renderAddress(); });
+  }
+  renderSteps(1);
+  renderAddress();
+  SITE_CFG=await fetchSiteConfig();
+})();
+
+document.getElementById('langToggle').addEventListener('click',()=>setTimeout(()=>{
+  renderSteps(STEP);
+  if(STEP===1) renderAddress();
+  else if(STEP===2) renderPayment();
+},50));
+</script>

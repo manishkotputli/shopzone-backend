@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopZone — India's Online Store</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/images/logo.png">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-top">
+    <!-- Logo -->
+    <a href="/" class="logo-wrap">
+
+     <img
+    src="<%= CFG.store_logo || '/images/logo.png' %>"
+    alt="<%= CFG.store_name || 'ShopZone' %>"
+>
+      <!-- <span class="logo-name">Shop<span>Zone</span></span> -->
+    </a>
+
+    <!-- Right icons -->
+    <div class="hdr-right">
+      <!-- Language toggle -->
+      <button id="langToggle" onclick="toggleLang()" class="lang-toggle-btn">हिंदी</button>
+
+      <!-- Profile / Sign-In icon -->
+      <button class="hdr-icon-btn" id="profileBtn" onclick="handleProfileClick()">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+        </svg>
+        <span id="profileLabel">साइन इन</span>
+      </button>
+
+      <!-- Cart icon -->
+      <a href="/cart" class="cart-btn">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45C5.16 14.58 5 15 5 15.5c0 1.1.9 2 2 2h14v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0023.43 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+        </svg>
+        <span class="cart-count" id="cartCount">0</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="header-nav d-none">
+    <div class="nav-inner">
+      <a href="/deals"               class="nav-link" data-t="todaysDeals">Today's Deals</a>
+      <a href="/category?cat=Electronics" class="nav-link" data-t="electronics">Electronics</a>
+      <a href="/category?cat=Fashion"     class="nav-link" data-t="fashion">Fashion</a>
+      <a href="/category?cat=Home"        class="nav-link" data-t="homeKitchen">Home & Kitchen</a>
+      <a href="/category?cat=Books"       class="nav-link" data-t="books">Books</a>
+      <a href="/category?cat=Sports"      class="nav-link" data-t="sports">Sports</a>
+      <a href="/category?cat=Beauty"      class="nav-link" data-t="beauty">Beauty</a>
+      <a href="/category?cat=Toys"        class="nav-link" data-t="toys">Toys</a>
+      <a href="/category?cat=Grocery"     class="nav-link" data-t="grocery">Grocery</a>
+    </div>
+  </nav>
+</header>
+
+<div class="toast" id="toast"></div>
+
+<script src="/js/lang.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/products.js"></script>
+<script>
+/* ── Cart count ── */
+function updateCartCount(){
+  const c=JSON.parse(localStorage.getItem('cart')||'[]');
+  document.getElementById('cartCount').textContent=c.reduce((s,i)=>s+i.qty,0)||'';
+}
+updateCartCount();
+
+/* ── Toast ── */
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+/* ── Add to cart (global) ── */
+function addToCart(id,name,price,variant){
+  if(!isLoggedIn()){ window._authCallback=()=>addToCart(id,name,price,variant); showAuthPopup(()=>addToCart(id,name,price,variant)); return; }
+  let cart=JSON.parse(localStorage.getItem('cart')||'[]');
+  const key=id+'|'+(variant||'');
+  const idx=cart.findIndex(i=>i.key===key);
+  if(idx>-1) cart[idx].qty++;
+  else cart.push({id,name,price,qty:1,variant:variant||'',key});
+  localStorage.setItem('cart',JSON.stringify(cart));
+  updateCartCount();
+  const isHi=getLang()==='hi';
+  showToast((isHi?'✓ कार्ट में जोड़ा: ':'✓ Added to cart: ')+name.substring(0,30));
+}
+
+/* ── Language toggle ── */
+function toggleLang(){
+  setLang(getLang()==='en'?'hi':'en');
+}
+
+/* ── Profile / Sign-In ── */
+function updateProfileLabel(){
+  const u=getUser(); const isHi=getLang()==='hi';
+  document.getElementById('profileLabel').textContent = u ? u.name.split(' ')[0] : (isHi?'साइन इन':'Sign In');
+}
+updateProfileLabel();
+
+function handleProfileClick(){
+  if(isLoggedIn()){ const u=getUser(); const isHi=getLang()==='hi';
+    if(confirm((isHi?`${u.name} के रूप में लॉगआउट करें?`:`Logout as ${u.name}?`))){ logoutUser(); updateProfileLabel(); showToast(isHi?'लॉगआउट सफल':'Logged out'); }
+  } else { showAuthPopup(null); }
+}
+</script>

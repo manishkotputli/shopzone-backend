@@ -1,0 +1,218 @@
+<%- include('../partials/header') %>
+
+<!-- Deal Strip -->
+<div class="deal-strip">
+  <span class="deal-strip-text" data-t="flashSale">🔥 FLASH SALE ENDS IN:</span>
+  <div class="countdown">
+    <div class="time-box" id="dh">05</div>:
+    <div class="time-box" id="dm">30</div>:
+    <div class="time-box" id="ds">00</div>
+  </div>
+  <a href="/deals" data-t="shopAllDeals">Shop All Deals →</a>
+</div>
+
+<!-- Hero Carousel -->
+<div class="hero">
+  <div class="hero-slides" id="heroSlides">
+    <div class="hero-slide">
+      <div class="hero-content">
+        <div class="hero-badge">🚀 Mega Sale Live Now</div>
+        <h1 class="hero-title" id="h1">Upto 70% OFF<br>on Electronics</h1>
+        <p class="hero-sub" id="h1s">Laptops, Phones, Tablets & More — Limited Time!</p>
+        <a href="/category?cat=Electronics" class="hero-btn" data-t="electronics">Shop Electronics</a>
+      </div>
+      <div class="hero-deco">💻</div>
+    </div>
+    <div class="hero-slide">
+      <div class="hero-content">
+        <div class="hero-badge">👗 Fashion Week</div>
+        <h1 class="hero-title" id="h2">New Arrivals<br>This Season</h1>
+        <p class="hero-sub" id="h2s">Top Brands • Trending Styles • Free Delivery</p>
+        <a href="/category?cat=Fashion" class="hero-btn" data-t="fashion">Explore Fashion</a>
+      </div>
+      <div class="hero-deco">👗</div>
+    </div>
+    <div class="hero-slide">
+      <div class="hero-content">
+        <div class="hero-badge">🏠 Home Essentials</div>
+        <h1 class="hero-title" id="h3">Transform Your<br>Home Today</h1>
+        <p class="hero-sub" id="h3s">Kitchen, Decor, Furniture & More — Great Prices!</p>
+        <a href="/category?cat=Home" class="hero-btn" data-t="homeKitchen">Shop Home</a>
+      </div>
+      <div class="hero-deco">🏠</div>
+    </div>
+  </div>
+  <button class="hero-prev" id="heroPrev">❮</button>
+  <button class="hero-next" id="heroNext">❯</button>
+  <div class="hero-dots">
+    <div class="hero-dot active" data-idx="0"></div>
+    <div class="hero-dot" data-idx="1"></div>
+    <div class="hero-dot" data-idx="2"></div>
+  </div>
+</div>
+
+<div class="page-wrap">
+  <!-- Promo Banners -->
+  <div class="promo-grid" style="margin-top:20px;">
+    <div class="promo-card">
+      <div class="promo-card-bg" style="background:linear-gradient(135deg,#00416a,#00b4d8)"></div>
+      <div class="promo-card-content">
+        <h3>Gaming Zone</h3><p>Consoles, PCs, Accessories</p>
+        <a href="/category?cat=Gaming">Shop Now</a>
+      </div>
+    </div>
+    <div class="promo-card">
+      <div class="promo-card-bg" style="background:linear-gradient(135deg,#6a0025,#f90)"></div>
+      <div class="promo-card-content">
+        <h3>Prime Deals</h3><p>Exclusive offers for members</p>
+        <a href="/deals">View Deals</a>
+      </div>
+    </div>
+    <div class="promo-card">
+      <div class="promo-card-bg" style="background:linear-gradient(135deg,#006a25,#06d6a0)"></div>
+      <div class="promo-card-content">
+        <h3>Grocery Fresh</h3><p>Delivered in 2 hours</p>
+        <a href="/category?cat=Grocery">Order Now</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Categories -->
+  <div class="section">
+    <div class="section-box">
+      <div class="section-header">
+        <h2 class="section-title" data-t="shopByCategory">Shop by Category</h2>
+        <a href="/category" class="see-more" data-t="seeAllCategories">See all categories</a>
+      </div>
+      <div class="cat-grid" id="catGrid">
+        <% const cats=[
+          {icon:'📱',name:'Mobiles',key:'Electronics'},
+          {icon:'💻',name:'Laptops',key:'Electronics'},
+          {icon:'📺',name:'TVs',key:'Electronics'},
+          {icon:'👗',name:'Fashion',key:'Fashion'},
+          {icon:'🏠',name:'Home',key:'Home'},
+          {icon:'📚',name:'Books',key:'Books'},
+          {icon:'⚽',name:'Sports',key:'Sports'},
+          {icon:'💄',name:'Beauty',key:'Beauty'},
+          {icon:'🧸',name:'Toys',key:'Toys'},
+          {icon:'🚗',name:'Automotive',key:'Automotive'},
+          {icon:'🌿',name:'Grocery',key:'Grocery'},
+          {icon:'🎮',name:'Gaming',key:'Gaming'},
+        ]; %>
+        <% cats.forEach(c=>{ %>
+          <a href="/category?cat=<%=c.key%>" class="cat-card">
+            <div class="cat-icon"><%=c.icon%></div>
+            <div class="cat-name"><%=c.name%></div>
+          </a>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Best Sellers (dynamic from localStorage) -->
+  <div class="section">
+    <div class="section-box">
+      <div class="section-header">
+        <h2 class="section-title" data-t="bestSellers">🔥 Best Sellers</h2>
+        <a href="/category" class="see-more" data-t="seeAll">See all</a>
+      </div>
+      <div class="prod-grid" id="bestSellersGrid"></div>
+    </div>
+  </div>
+
+  <!-- Today's Deals -->
+  <div class="section">
+    <div class="section-box">
+      <div class="section-header">
+        <h2 class="section-title" data-t="todaysDealsSection">⚡ Today's Deals</h2>
+        <a href="/deals" class="see-more" data-t="seeAll">See all deals</a>
+      </div>
+      <div class="prod-grid" id="todayDealsGrid"></div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
+
+<script>
+// ── Render products from MySQL via API ────────────────────────────────────────
+function renderProductCard(p, showSave) {
+  p = normalizeProduct(p);
+  const img = p.image_url ? `<img src="${p.image_url}" alt="${p.name}" style="max-width:100%;max-height:100%;object-fit:contain;">` : (p.emoji||'📦');
+  const badge = p.badge ? `<div class="prod-badge ${p.badge.toLowerCase()}">${p.badge}</div>`
+    : p.save ? `<div class="prod-badge">-${p.save}%</div>` : '';
+  const saveEl = showSave && p.save ? `<span class="price-save">Save ${p.save}%</span>` : '';
+  const origEl = p.orig ? `<span class="price-orig">₹${p.orig.toLocaleString('en-IN')}</span>` : '';
+  const isHi = getLang() === 'hi';
+  return `<div class="prod-card">
+    ${badge}
+    <a href="/product?id=${p.id}"><div class="prod-img-wrap">${img}</div></a>
+    <div class="prod-body">
+      <div class="prod-brand">${p.brand||''}</div>
+      <a href="/product?id=${p.id}"><div class="prod-name">${p.name}</div></a>
+      <div class="rating-row">
+        <span class="stars">${'★'.repeat(Math.floor(p.rating||4))}${(p.rating||4)%1===0.5?'½':''}</span>
+        <span class="rating-count">(${(p.reviews||0).toLocaleString()})</span>
+      </div>
+      <div class="price-row">
+        <span class="price">₹${p.price.toLocaleString('en-IN')}</span>
+        ${origEl}${saveEl}
+      </div>
+      <div class="prime-badge"><span>prime</span><small data-t="freeDelivery">${isHi?'मुफ्त डिलीवरी':'FREE Delivery'}</small></div>
+      <button class="add-cart-btn" onclick="addToCart(${p.id},'${p.name.replace(/'/g,"\\'")}',${p.price})" data-t="addToCart">${isHi?'कार्ट में जोड़ें':'Add to Cart'}</button>
+    </div>
+  </div>`;
+}
+
+async function renderHomePage() {
+  const [bestSellers, deals] = await Promise.all([
+    fetchProducts({ featured: 'true' }),
+    fetchProducts({ minDiscount: 30, sort: 'discount' })
+  ]);
+  const fallback = bestSellers.length ? bestSellers : await fetchProducts({});
+
+  document.getElementById('bestSellersGrid').innerHTML = fallback.slice(0, 8).map(p => renderProductCard(p, false)).join('');
+  document.getElementById('todayDealsGrid').innerHTML = (deals.length ? deals : fallback.slice(0, 4)).slice(0, 4).map(p => renderProductCard(p, true)).join('');
+}
+
+renderHomePage();
+
+// ── Hero Carousel ────────────────────────────────────────────────────────────
+let cur=0; const slides=document.querySelectorAll('.hero-slide'); const dots=document.querySelectorAll('.hero-dot');
+function goTo(n){ cur=(n+slides.length)%slides.length; document.getElementById('heroSlides').style.transform=`translateX(-${cur*100}%)`; dots.forEach((d,i)=>d.classList.toggle('active',i===cur)); }
+document.getElementById('heroPrev').onclick=()=>goTo(cur-1);
+document.getElementById('heroNext').onclick=()=>goTo(cur+1);
+dots.forEach(d=>d.addEventListener('click',()=>goTo(+d.dataset.idx)));
+let autoSlide=setInterval(()=>goTo(cur+1),4000);
+document.querySelector('.hero').addEventListener('mouseenter',()=>clearInterval(autoSlide));
+document.querySelector('.hero').addEventListener('mouseleave',()=>{ autoSlide=setInterval(()=>goTo(cur+1),4000); });
+
+// ── Flash Sale Countdown ─────────────────────────────────────────────────────
+let total = 5*3600+30*60;
+setInterval(()=>{
+  if(total<=0) return; total--;
+  const h=Math.floor(total/3600), m=Math.floor((total%3600)/60), s=total%60;
+  document.getElementById('dh').textContent=String(h).padStart(2,'0');
+  document.getElementById('dm').textContent=String(m).padStart(2,'0');
+  document.getElementById('ds').textContent=String(s).padStart(2,'0');
+},1000);
+
+// Hero text in Hindi
+function updateHeroLang() {
+  const isHi = getLang() === 'hi';
+  if (document.getElementById('h1')) {
+    document.getElementById('h1').innerHTML = isHi ? 'इलेक्ट्रॉनिक्स पर<br>70% तक छूट' : 'Upto 70% OFF<br>on Electronics';
+    document.getElementById('h1s').textContent = isHi ? 'लैपटॉप, फोन, टैबलेट और अधिक — सीमित समय!' : 'Laptops, Phones, Tablets & More — Limited Time!';
+    document.getElementById('h2').innerHTML = isHi ? 'इस सीजन<br>नए आगमन' : 'New Arrivals<br>This Season';
+    document.getElementById('h2s').textContent = isHi ? 'टॉप ब्रांड • ट्रेंडिंग स्टाइल • मुफ्त डिलीवरी' : 'Top Brands • Trending Styles • Free Delivery';
+    document.getElementById('h3').innerHTML = isHi ? 'आज अपना घर<br>बदलें' : 'Transform Your<br>Home Today';
+    document.getElementById('h3s').textContent = isHi ? 'किचन, सजावट, फर्नीचर और अधिक — शानदार कीमतें!' : 'Kitchen, Decor, Furniture & More — Great Prices!';
+  }
+}
+
+// Re-render on language toggle
+document.getElementById('langToggle').addEventListener('click', () => {
+  setTimeout(() => { renderHomePage(); updateHeroLang(); }, 50);
+});
+updateHeroLang();
+</script>

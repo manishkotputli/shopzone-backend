@@ -1,0 +1,22 @@
+<%- include('../partials/header') %>
+<div class="page-wrap">
+  <h1 id="wishTitle" style="font-size:22px;font-weight:700;margin-bottom:16px;">My Wish List</h1>
+  <div id="wishContent">
+    <div style="background:#fff;border-radius:8px;padding:32px;text-align:center;">
+      <div style="font-size:64px;margin-bottom:16px;">❤️</div>
+      <p id="wishSub" style="color:#565959;margin-bottom:16px;">Your wishlist is empty. Add items while shopping!</p>
+      <a href="/" style="background:#f90;color:#131921;padding:10px 24px;border-radius:6px;font-weight:700;" id="shopLink">Shop Now</a>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>
+<script>
+function updateWishLang() {
+  const isHi = getLang() === 'hi';
+  document.getElementById('wishTitle').textContent = isHi ? 'मेरी विशलिस्ट' : 'My Wish List';
+  document.getElementById('wishSub').textContent = isHi ? 'आपकी विशलिस्ट खाली है। खरीदारी करते समय आइटम जोड़ें!' : 'Your wishlist is empty. Add items while shopping!';
+  document.getElementById('shopLink').textContent = isHi ? 'अभी खरीदें' : 'Shop Now';
+}
+updateWishLang();
+document.getElementById('langToggle').addEventListener('click', () => setTimeout(updateWishLang, 50));
+</script>

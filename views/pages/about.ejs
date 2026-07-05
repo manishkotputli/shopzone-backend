@@ -1,0 +1,45 @@
+<%- include('../partials/header') %>
+<div class="page-wrap">
+  <div style="background:#fff;border-radius:8px;padding:32px;margin-bottom:20px;">
+    <h1 id="aboutTitle" style="font-size:28px;font-weight:800;margin-bottom:8px;">About ShopZone</h1>
+    <p id="aboutSub" style="color:#565959;font-size:15px;margin-bottom:24px;">India's Fastest Growing Online Store</p>
+    <div class="info-grid">
+      <div class="info-card"><div class="info-card-icon">🚀</div><h3 id="ab1h">Our Mission</h3><p id="ab1p">To provide every Indian with access to quality products at the best prices, delivered at lightning speed.</p></div>
+      <div class="info-card"><div class="info-card-icon">🛡️</div><h3 id="ab2h">Trusted & Secure</h3><p id="ab2p">100% genuine products with secure payments and buyer protection on every order.</p></div>
+      <div class="info-card"><div class="info-card-icon">🚚</div><h3 id="ab3h">Fast Delivery</h3><p id="ab3p">Next-day delivery across 27,000+ pin codes in India. Free delivery on all orders.</p></div>
+      <div class="info-card"><div class="info-card-icon">💬</div><h3 id="ab4h">24/7 Support</h3><p id="ab4p">Our customer support team is always ready to help you with any queries or issues.</p></div>
+    </div>
+  </div>
+  <div style="background:linear-gradient(135deg,#131921,#232f3e);border-radius:8px;padding:32px;color:#fff;text-align:center;">
+    <h2 id="statsTitle" style="font-size:22px;font-weight:700;margin-bottom:20px;">ShopZone in Numbers</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:20px;">
+      <div><div style="font-size:36px;font-weight:800;color:#f90;">50M+</div><div id="stat1" style="font-size:13px;color:#ccc;margin-top:4px;">Happy Customers</div></div>
+      <div><div style="font-size:36px;font-weight:800;color:#f90;">5M+</div><div id="stat2" style="font-size:13px;color:#ccc;margin-top:4px;">Products Listed</div></div>
+      <div><div style="font-size:36px;font-weight:800;color:#f90;">27K+</div><div id="stat3" style="font-size:13px;color:#ccc;margin-top:4px;">Pin Codes</div></div>
+      <div><div style="font-size:36px;font-weight:800;color:#f90;">24/7</div><div id="stat4" style="font-size:13px;color:#ccc;margin-top:4px;">Customer Support</div></div>
+    </div>
+  </div>
+</div>
+<%- include('../partials/footer') %>
+<script>
+function updateAboutLang() {
+  const isHi = getLang() === 'hi';
+  document.getElementById('aboutTitle').textContent = isHi ? 'ShopZone के बारे में' : 'About ShopZone';
+  document.getElementById('aboutSub').textContent = isHi ? 'भारत का सबसे तेज़ी से बढ़ता ऑनलाइन स्टोर' : "India's Fastest Growing Online Store";
+  document.getElementById('ab1h').textContent = isHi ? 'हमारा मिशन' : 'Our Mission';
+  document.getElementById('ab1p').textContent = isHi ? 'हर भारतीय को सर्वोत्तम कीमतों पर गुणवत्तापूर्ण उत्पाद उपलब्ध कराना।' : 'To provide every Indian with access to quality products at the best prices.';
+  document.getElementById('ab2h').textContent = isHi ? 'विश्वसनीय और सुरक्षित' : 'Trusted & Secure';
+  document.getElementById('ab2p').textContent = isHi ? '100% असली उत्पाद और हर ऑर्डर पर खरीदार सुरक्षा।' : '100% genuine products with secure payments and buyer protection.';
+  document.getElementById('ab3h').textContent = isHi ? 'तेज़ डिलीवरी' : 'Fast Delivery';
+  document.getElementById('ab3p').textContent = isHi ? '27,000+ पिनकोड पर अगले दिन डिलीवरी। सभी ऑर्डर पर मुफ्त डिलीवरी।' : 'Next-day delivery across 27,000+ pin codes. Free delivery on all orders.';
+  document.getElementById('ab4h').textContent = isHi ? '24/7 सहायता' : '24/7 Support';
+  document.getElementById('ab4p').textContent = isHi ? 'हमारी टीम हमेशा आपकी सहायता के लिए तैयार है।' : 'Our customer support team is always ready to help.';
+  document.getElementById('statsTitle').textContent = isHi ? 'ShopZone के आँकड़े' : 'ShopZone in Numbers';
+  document.getElementById('stat1').textContent = isHi ? 'खुश ग्राहक' : 'Happy Customers';
+  document.getElementById('stat2').textContent = isHi ? 'उत्पाद सूचीबद्ध' : 'Products Listed';
+  document.getElementById('stat3').textContent = isHi ? 'पिनकोड' : 'Pin Codes';
+  document.getElementById('stat4').textContent = isHi ? 'ग्राहक सहायता' : 'Customer Support';
+}
+updateAboutLang();
+document.getElementById('langToggle').addEventListener('click', () => setTimeout(updateAboutLang, 50));
+</script>

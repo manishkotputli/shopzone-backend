@@ -1,0 +1,51 @@
+<%- include('../partials/header') %>
+<div class="page-wrap">
+  <div id="accountContent"></div>
+</div>
+<%- include('../partials/footer') %>
+<script>
+function renderAccount() {
+  const isHi = getLang() === 'hi';
+  const user = getUser();
+  if (!user) {
+    document.getElementById('accountContent').innerHTML = `
+      <div style="text-align:center;padding:60px;background:#fff;border-radius:8px;">
+        <div style="font-size:64px;margin-bottom:16px;">👤</div>
+        <h2>${isHi?'साइन इन करें':'Please Sign In'}</h2>
+        <p style="color:#565959;margin:8px 0 20px;">${isHi?'अपने अकाउंट तक पहुंचने के लिए साइन इन करें':'Sign in to access your account'}</p>
+        <button onclick="showAuthPopup(()=>renderAccount())" style="background:#f90;color:#131921;border:none;padding:12px 28px;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer;">${isHi?'साइन इन करें':'Sign In'}</button>
+      </div>`;
+    return;
+  }
+  document.getElementById('accountContent').innerHTML = `
+    <div class="account-layout">
+      <div class="account-sidebar">
+        <h3>${isHi?'नमस्ते':'Hello'}, ${user.name.split(' ')[0]}</h3>
+        <div class="account-nav">
+          <a href="#" class="active">📊 ${isHi?'मेरा अकाउंट':'My Account'}</a>
+          <a href="/cart">🛒 ${isHi?'मेरी कार्ट':'My Cart'}</a>
+          <a href="/checkout">📦 ${isHi?'चेकआउट':'Checkout'}</a>
+        </div>
+        <button onclick="logoutUser();renderAccount();" style="width:100%;margin-top:20px;padding:10px;background:#dc2626;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;">${isHi?'लॉगआउट':'Logout'}</button>
+      </div>
+      <div>
+        <div style="background:#fff;border-radius:8px;padding:24px;margin-bottom:16px;">
+          <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;">${isHi?'अकाउंट जानकारी':'Account Information'}</h2>
+          <div style="font-size:14px;line-height:2;color:#333;">
+            <div><strong>${isHi?'नाम':'Name'}:</strong> ${user.name}</div>
+            <div><strong>${isHi?'मोबाइल':'Mobile'}:</strong> +91 ${user.mobile}</div>
+            <div style="font-size:12px;color:#565959;margin-top:8px;">⚠️ ${isHi?'आपका डेटा सुरक्षित है और किसी डेटाबेस में संग्रहीत नहीं है':'Your data is secure and not stored in any database'}</div>
+          </div>
+        </div>
+        <div class="account-grid">
+          <a href="/cart" class="account-card"><div class="account-card-icon">🛒</div><h4>${isHi?'मेरी कार्ट':'My Cart'}</h4><p>${isHi?'कार्ट में आइटम देखें':'View items in cart'}</p></a>
+          <a href="/checkout" class="account-card"><div class="account-card-icon">📦</div><h4>${isHi?'चेकआउट':'Checkout'}</h4><p>${isHi?'ऑर्डर दें':'Place an order'}</p></a>
+          <a href="/deals" class="account-card"><div class="account-card-icon">⚡</div><h4>${isHi?'आज के ऑफर':'Today\'s Deals'}</h4><p>${isHi?'बेस्ट डील्स देखें':'See best deals'}</p></a>
+          <a href="/" class="account-card"><div class="account-card-icon">🏠</div><h4>${isHi?'खरीदारी जारी रखें':'Continue Shopping'}</h4><p>${isHi?'होमपेज पर जाएं':'Go to homepage'}</p></a>
+        </div>
+      </div>
+    </div>`;
+}
+renderAccount();
+document.getElementById('langToggle').addEventListener('click', () => setTimeout(renderAccount, 50));
+</script>

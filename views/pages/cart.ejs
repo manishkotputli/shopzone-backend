@@ -1,0 +1,100 @@
+<%- include('../partials/header') %>
+
+<div class="page-wrap">
+  <div class="cart-layout">
+    <div>
+      <div class="cart-box">
+        <h1 class="cart-title" data-t="shoppingCart">Shopping Cart</h1>
+        <div id="cartItems"></div>
+        <div id="emptyCart" style="display:none;text-align:center;padding:40px;">
+          <div style="font-size:60px;margin-bottom:16px;">🛒</div>
+          <h2 style="font-size:20px;margin-bottom:8px;" data-t="emptyCart">Your cart is empty</h2>
+          <p style="color:#565959;margin-bottom:16px;" data-t="emptyCartSub">Add items you love to your cart.</p>
+          <a href="/" style="background:#f90;color:#131921;padding:10px 24px;border-radius:6px;font-weight:700;font-size:14px;" data-t="shopNow">Shop Now</a>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="order-summary">
+        <h3 data-t="orderSummary">Order Summary</h3>
+        <div class="summary-row"><span data-t="subtotal">Subtotal</span> (<span id="itemCount">0</span> items)<span id="subtotal">₹0</span></div>
+        <div class="summary-row"><span data-t="deliveryCharges">Delivery Charges</span><span style="color:#067d62;">FREE</span></div>
+        <div class="summary-row"><span data-t="credits">ShopZone Credits</span><span style="color:#067d62;">-₹0</span></div>
+        <div class="summary-row summary-total"><span data-t="orderTotal">Order Total</span><span id="total">₹0</span></div>
+        <a href="/checkout" class="checkout-btn" data-t="proceedCheckout">Proceed to Checkout</a>
+        <div style="text-align:center;margin-top:10px;">
+          <span style="font-size:12px;color:#565959;" data-t="safePay">🔒 Safe and Secure Payments. 100% Genuine Products.</span>
+        </div>
+      </div>
+      <!-- <div style="background:#fff;border-radius:8px;padding:16px;margin-top:14px;border:1.5px solid #ddd;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:8px;" data-t="haveCoupon">Have a Coupon?</div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" data-t-ph="enterCoupon" placeholder="Enter coupon code" style="flex:1;padding:8px 10px;border:1.5px solid #ddd;border-radius:6px;font-size:13px;">
+          <button onclick="showToast('✓ Coupon applied!')" style="background:#f90;color:#131921;border:none;padding:8px 14px;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;" data-t="apply">Apply</button>
+        </div>
+      </div> -->
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
+
+<script>
+function renderCart(){
+  const cart = JSON.parse(localStorage.getItem('cart')||'[]');
+  const container = document.getElementById('cartItems');
+  const empty = document.getElementById('emptyCart');
+  const isHi = getLang() === 'hi';
+  if(!cart.length){ empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  let total=0, count=0;
+  container.innerHTML = cart.map((item,idx)=>{
+    total += item.price * item.qty;
+    count += item.qty;
+    return `
+    <div class="cart-item">
+      <div class="cart-item-img">📦</div>
+      <div>
+        <div class="cart-item-name">${item.name}</div>
+        <div style="font-size:12px;color:#067d62;margin-bottom:4px;">${isHi?'✓ स्टॉक में | कल मुफ्त डिलीवरी':'✓ In Stock | FREE Delivery Tomorrow'}</div>
+        <div style="font-size:12px;color:#565959;">${isHi?'बेचने वाला: ShopZone Official':'Sold by: ShopZone Official'}</div>
+        <div class="cart-item-actions">
+          <select onchange="updateQty(${idx},this.value)">
+            ${[1,2,3,4,5].map(n=>`<option ${item.qty==n?'selected':''}>${n}</option>`).join('')}
+          </select>
+          <button class="text-btn" onclick="removeItem(${idx})">${isHi?'हटाएं':'Delete'}</button>
+          <button class="text-btn" onclick="showToast('${isHi?'बाद के लिए सहेजा!':'Saved for later!'}')">${isHi?'बाद के लिए सहेजें':'Save for later'}</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:16px;font-weight:700;">₹${(item.price*item.qty).toLocaleString('en-IN')}</div>
+        <div style="font-size:12px;color:#565959;">₹${item.price.toLocaleString('en-IN')} ${isHi?'प्रत्येक':'each'}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('itemCount').textContent = count;
+  document.getElementById('subtotal').textContent = '₹'+total.toLocaleString('en-IN');
+  document.getElementById('total').textContent = '₹'+total.toLocaleString('en-IN');
+}
+
+function updateQty(idx,qty){
+  let cart=JSON.parse(localStorage.getItem('cart')||'[]');
+  cart[idx].qty=+qty;
+  localStorage.setItem('cart',JSON.stringify(cart));
+  renderCart(); updateCartCount();
+}
+function removeItem(idx){
+  let cart=JSON.parse(localStorage.getItem('cart')||'[]');
+  cart.splice(idx,1);
+  localStorage.setItem('cart',JSON.stringify(cart));
+  renderCart(); updateCartCount();
+  showToast(getLang()==='hi'?'आइटम कार्ट से हटाया':'Item removed from cart');
+}
+renderCart();
+
+// Re-render on lang change
+document.getElementById('langToggle').addEventListener('click', ()=>setTimeout(renderCart,50));
+</script>

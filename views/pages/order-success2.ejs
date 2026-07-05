@@ -1,0 +1,59 @@
+<%- include('../partials/header') %>
+
+<div class="page-wrap">
+  <div class="success-wrap">
+    <div class="success-icon">🎉</div>
+    <div class="success-box">
+      <h1 data-t="orderPlaced">Order Placed Successfully!</h1>
+      <p style="color:#565959;font-size:14px;margin-bottom:12px;" data-t="thankYou">Thank you for shopping with ShopZone!</p>
+      <div class="order-num"><span data-t="orderHash">Order #SZ-2026-</span><span id="orderNum"></span></div>
+      <p style="font-size:13px;color:#565959;margin-bottom:16px;" data-t="confirmation">A confirmation SMS has been sent to your mobile.</p>
+
+      <div style="background:#e8f5e9;border-radius:8px;padding:14px;margin-bottom:16px;text-align:left;">
+        <div style="font-size:13px;font-weight:700;color:#1b5e20;margin-bottom:6px;" data-t="deliveryDetails">📦 Delivery Details</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;">
+          <div><span data-t="estimatedDelivery">Estimated Delivery:</span> <strong id="delivDate"></strong></div>
+          <div data-t="deliveryPartner">Delivery Partner: ShopZone Logistics</div>
+          <div><span data-t="trackingId">Tracking ID:</span> <strong>SZL-<span id="trackId"></span></strong></div>
+        </div>
+      </div>
+
+      <!-- Tracking Steps -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;text-align:left;" data-t="orderStatus">Order Status</div>
+        <div class="tracking-steps">
+          <div class="step done">
+            <div class="step-dot">✓</div>
+            <div class="step-label" data-t="orderPlacedStep">Order Placed</div>
+          </div>
+          <div class="step done">
+            <div class="step-dot">✓</div>
+            <div class="step-label" data-t="confirmed">Confirmed</div>
+          </div>
+          <div class="step">
+            <div class="step-dot">🚚</div>
+            <div class="step-label" data-t="shipped">Shipped</div>
+          </div>
+          <div class="step">
+            <div class="step-dot">📦</div>
+            <div class="step-label" data-t="delivered">Delivered</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <a href="/" style="padding:10px 20px;background:#131921;color:#fff;border-radius:6px;font-size:13px;font-weight:600;" data-t="trackOrder">Track Order</a>
+        <a href="/" style="padding:10px 20px;background:#f90;color:#131921;border-radius:6px;font-size:13px;font-weight:700;" data-t="continueShopping">Continue Shopping</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
+
+<script>
+document.getElementById('orderNum').textContent = Math.floor(40000 + Math.random() * 9999);
+document.getElementById('trackId').textContent = Math.floor(100000000 + Math.random() * 899999999);
+const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+document.getElementById('delivDate').textContent = tomorrow.toLocaleDateString(getLang()==='hi'?'hi-IN':'en-IN', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+</script>

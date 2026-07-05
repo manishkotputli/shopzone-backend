@@ -1,0 +1,402 @@
+<%- include('../partials/header') %>
+
+<div class="page-wrap">
+  <div class="breadcrumb" id="breadcrumb">
+    <a href="/">Home</a><span>›</span>
+    <a href="#" id="breadCat">Category</a><span>›</span>
+    <span id="prodBreadName">Product</span>
+  </div>
+  <div id="productContainer"><div style="padding:60px;text-align:center;color:var(--muted);">Loading...</div></div>
+</div>
+
+<%- include('../partials/footer') %>
+
+<script>
+let CURRENT_PRODUCT = null;
+let SELECTED_VARIANTS = {};  // { 'Size': 'M', 'Color': 'Red' }
+
+function normalizeProduct(raw){
+
+  let images = raw.images;
+
+  if (typeof images === "string") {
+    try {
+      images = JSON.parse(images);
+    } catch (e) {
+      images = [];
+    }
+  }
+
+  if (!Array.isArray(images)) {
+    images = [];
+  }
+
+  return {
+    ...raw,
+    images
+  };
+}
+async function loadProduct(){
+  const params = new URLSearchParams(location.search);
+
+  const id =
+    params.get("product_id") ||
+    params.get("id");
+
+  if (!id) {
+    document.getElementById("productContainer").innerHTML =
+      "<h2 style='padding:50px;text-align:center'>Product not found.</h2>";
+    return;
+  }
+
+  const isHi = getLang()==='hi';
+
+  const raw = await fetchProductById(id);
+
+  if(!raw){
+    document.getElementById('productContainer').innerHTML =
+      `<p style="padding:40px;text-align:center;">
+        ${isHi?'उत्पाद नहीं मिला':'Product not found.'}
+      </p>`;
+    return;
+  }
+
+  CURRENT_PRODUCT = normalizeProduct(raw);
+
+  console.log("RAW IMAGES:", raw.images);
+  console.log("NORMALIZED IMAGES:", CURRENT_PRODUCT.images);
+  console.log("IS ARRAY:", Array.isArray(CURRENT_PRODUCT.images));
+
+  document.getElementById('prodBreadName').textContent =
+    CURRENT_PRODUCT.name.substring(0,45);
+
+  document.getElementById('breadCat').textContent =
+    CURRENT_PRODUCT.category;
+
+  document.getElementById('breadCat').href =
+    '/category?cat=' + encodeURIComponent(CURRENT_PRODUCT.category);
+
+  renderProduct(isHi);
+}
+
+function renderProduct(isHi){
+  
+  const p = CURRENT_PRODUCT;
+  const variants = p.variants||[];
+  const reviews  = p.reviews||[];
+
+  // console.log(p.reviews);
+// console.log(typeof p.reviews);
+// console.log(Array.isArray(p.reviews));
+  /* ── variant groups ── */
+  const variantGroups = {};
+  variants.forEach(v=>{ (variantGroups[v.variant_type]=variantGroups[v.variant_type]||[]).push(v); });
+
+  const variantHTML = Object.entries(variantGroups).map(([type,opts])=>`
+    <div class="variant-section">
+      <div class="variant-label">${type}: <span id="varSel_${type}" style="font-weight:400;">${isHi?'चुनें':'Select'}</span></div>
+      <div class="variant-options">
+        ${opts.map(o=>`
+          <button class="variant-btn ${o.stock<=0?'out-of-stock':''}"
+            onclick="selectVariant('${type}','${o.variant_value}',${o.price_modifier||0},${o.stock||0},this)"
+            title="${o.stock<=0?(isHi?'स्टॉक में नहीं':'Out of Stock'):''}">
+            ${o.variant_value}${o.price_modifier&&o.price_modifier>0?` (+₹${o.price_modifier})`:''}
+          </button>`).join('')}
+      </div>
+    </div>`).join('');
+
+  /* ── delivery date (7 days from now) ── */
+  const delivDate = new Date(); delivDate.setDate(delivDate.getDate()+7);
+  const delivStr = delivDate.toLocaleDateString(isHi?'hi-IN':'en-IN',{weekday:'long',day:'numeric',month:'long'});
+
+  /* ── images ── */
+  // const imgs = [p.image_url].filter(Boolean);
+  const imgs = (Array.isArray(p.images) && p.images.length)
+    ? p.images
+    : (p.image_url ? [p.image_url] : []);
+    console.log(imgs);
+  const mainImg = imgs.length
+    ? `<img src="${imgs[0]}" id="mainImgEl" alt="${p.name}" style="max-width:100%;max-height:100%;object-fit:contain;">`
+    : `<span id="mainImgEl" style="font-size:100px;">${p.emoji||'📦'}</span>`;
+
+  /* ── highlights ── */
+  const hls = Array.isArray(p.highlights)&&p.highlights.length ? p.highlights : (p.desc?p.desc.split(',').map(s=>s.trim()):[]);
+
+  /* ── specifications ── */
+  const specs = p.specifications&&typeof p.specifications==='object' ? p.specifications : {};
+  const specExtra = [['Brand',p.brand],['Category',p.category],['SKU',p.sku],['Country of Origin',p.country_of_origin],['Warranty',p.warranty_months?`${p.warranty_months} Months`:null]].filter(([,v])=>v);
+
+  /* ── rating breakdown ── */
+  const ratingBreakdown = calculateRatingBreakdown(reviews, p.rating||4);
+
+  /* ── reviews HTML ── */
+  const reviewsHtml = reviews.slice(0,10).map(r=>`
+    <div class="review-item">
+      <div class="reviewer-row">
+        <div class="reviewer-avatar">${r.reviewer_name?.[0]||'U'}</div>
+        <div>
+          <div class="reviewer-name">${r.reviewer_name||'User'}</div>
+          ${r.reviewer_city?`<div style="font-size:11px;color:var(--muted);">${r.reviewer_city}</div>`:''}
+        </div>
+      </div>
+      <div class="review-stars">${'★'.repeat(r.rating||4)}${'☆'.repeat(5-(r.rating||4))}</div>
+      ${r.title?`<div class="review-title">${r.title}</div>`:''}
+      <div class="review-meta">${r.review_date?new Date(r.review_date).toLocaleDateString(isHi?'hi-IN':'en-IN',{day:'numeric',month:'long',year:'numeric'}):''}</div>
+      ${r.verified?`<div class="review-verified">✓ ${isHi?'सत्यापित खरीदारी':'Verified Purchase'}</div>`:''}
+      <div class="review-body">${r.body||''}</div>
+      ${r.helpful_count?`<div class="review-helpful">${r.helpful_count} ${isHi?'लोगों को यह समीक्षा उपयोगी लगी':'people found this helpful'}</div>`:''}
+    </div>`).join('');
+
+  document.getElementById('productContainer').innerHTML = `
+  <div class="product-layout">
+    <!-- Images -->
+    <div class="product-images">
+      <div class="main-img">${mainImg}</div>
+      
+       <div class="thumb-row" id="thumbRow">
+    ${
+        imgs.length
+        ? imgs.map((img,index)=>`
+            <div class="thumb ${index===0?'active':''}" onclick="setImg('${img}',this)">
+                <img src="${img}">
+            </div>
+        `).join('')
+        : `<div class="thumb active">${p.emoji||'📦'}</div>`
+    }
+</div>
+    </div>
+
+    <!-- Info -->
+    <div class="product-info">
+      <p style="font-size:12px;color:var(--link);margin-bottom:4px;">
+        ${isHi?'ब्रांड:':'Brand:'} <a href="/category?cat=${encodeURIComponent(p.category)}" style="color:var(--link);">${p.brand||'ShopZone'}</a>
+      </p>
+      <h1>${p.name}</h1>
+
+      <div style="display:flex;align-items:center;gap:8px;margin:8px 0;">
+        <a href="#reviews" style="display:flex;align-items:center;gap:4px;color:var(--link);">
+          <span style="color:#f0a500;font-size:14px;">${starStr(p.rating)}</span>
+          <span style="font-size:13px;">${p.rating||4}</span>
+          <span style="font-size:13px;">(${(p.reviews_count||p.review_count||reviews.length).toLocaleString()})</span>
+        </a>
+        ${reviews.length?`<span style="font-size:12px;color:var(--muted);">| ${reviews.length} ${isHi?'समीक्षाएं':'reviews'}</span>`:''}
+      </div>
+      <hr class="divider">
+
+      <!-- Price -->
+      <div style="font-size:22px;font-weight:700;margin-bottom:2px;" id="displayPrice">
+        ₹${p.price.toLocaleString('en-IN')}
+        ${p.save?`<span style="font-size:14px;color:var(--red);font-weight:700;margin-left:6px;">-${p.save}%</span>`:''}
+      </div>
+      ${p.orig?`<div style="font-size:13px;color:var(--muted);">M.R.P.: <s>₹${p.orig.toLocaleString('en-IN')}</s> <span style="color:var(--green);font-weight:600;">${isHi?'बचाएं':'Save'} ₹${(p.orig-p.price).toLocaleString('en-IN')}</span></div>`:''}
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">${isHi?'सभी करों सहित':'Inclusive of all taxes'}</div>
+
+      <!-- Bank offer -->
+      <div style="border:1px solid #ddd;border-radius:4px;padding:10px 12px;font-size:12px;margin-bottom:12px;">
+        🏦 <strong>${isHi?'बैंक ऑफर:':'Bank Offer:'}</strong> ${isHi?'SBI क्रेडिट कार्ड पर 10% छूट':'10% off on SBI Credit Cards. Min ₹500'}
+      </div>
+      <hr class="divider">
+
+      <!-- Variants -->
+      ${variantHTML}
+      ${variantHTML?'<hr class="divider">':''}
+
+      <!-- Highlights -->
+      ${hls.length?`
+      <div style="margin-bottom:14px;">
+        <strong style="font-size:13px;display:block;margin-bottom:8px;">${isHi?'इस आइटम के बारे में':'About this item'}</strong>
+        <ul class="feat-list">${hls.map(h=>`<li>${h}</li>`).join('')}</ul>
+      </div>`:''}
+
+      <!-- Description -->
+      ${p.desc?`<div style="margin-bottom:14px;font-size:13px;line-height:1.7;color:#333;">${p.desc}</div>`:''}
+
+      <!-- In the Box -->
+      ${Array.isArray(p.in_box)&&p.in_box.length?`
+      <div style="margin-bottom:14px;">
+        <strong style="font-size:13px;display:block;margin-bottom:8px;">${isHi?'बॉक्स में क्या है':'In the Box'}</strong>
+        <ul class="feat-list">${p.in_box.map(i=>`<li>${i}</li>`).join('')}</ul>
+      </div>`:''}
+    </div>
+
+    <!-- Buy Box -->
+    <div class="buy-box">
+      <div class="buy-price" id="buyBoxPrice">₹${p.price.toLocaleString('en-IN')}</div>
+      <div class="delivery-badge">
+        🚚 <strong>${isHi?'मुफ्त डिलीवरी':'FREE Delivery'}</strong><br>
+        ${isHi?'डिलीवरी':'Delivery by'} <strong>${delivStr}</strong>
+      </div>
+      <div class="${p.stock_quantity>0?'in-stock':'out-of-stock-txt'}">
+        ${p.stock_quantity>0?'✓ '+(isHi?'स्टॉक में है':'In Stock'):'✗ '+(isHi?'स्टॉक में नहीं':'Out of Stock')}
+      </div>
+      <div class="qty-sel">
+        <label style="font-size:13px;font-weight:600;">${isHi?'मात्रा:':'Qty:'}</label>
+        <select id="qty" onchange="updatePrice()">${[1,2,3,4,5].map(n=>`<option>${n}</option>`).join('')}</select>
+      </div>
+      <button class="btn-secondary" onclick="buyNowProduct()" ${p.stock_quantity<=0?'disabled':''}>
+        ${isHi?'अभी खरीदें':'Buy Now'}
+      </button>
+      <button class="btn-primary" onclick="buyNowProduct()" ${p.stock_quantity<=0?'disabled':''}>
+        ${isHi?'कार्ट में डालें':'Add to Cart'}
+      </button>
+  
+      <hr class="divider">
+      <div style="font-size:12px;color:var(--muted);line-height:2;">
+        <div>🚚 <strong>${isHi?'भेजने वाला:':'Ships from:'}</strong> ShopZone</div>
+        <div>🏪 <strong>${isHi?'बेचने वाला:':'Sold by:'}</strong> ${p.seller_name||'ShopZone Official'}</div>
+        <div>🔄 <strong>${isHi?'वापसी:':'Returns:'}</strong> ${isHi?'10 दिन वापसी':'10 days returnable'}</div>
+        ${p.warranty_months?`<div>🛡️ <strong>${isHi?'वारंटी:':'Warranty:'}</strong> ${p.warranty_months} ${isHi?'महीने':'Months'}</div>`:''}
+      </div>
+      <hr class="divider">
+      <button onclick="showToast(getLang()==='hi'?'❤️ विशलिस्ट में जोड़ा!':'❤️ Added to Wishlist!')" style="width:100%;border:1.5px solid #ddd;border-radius:4px;padding:8px;font-size:13px;cursor:pointer;background:#fff;">
+        ${isHi?'विशलिस्ट में जोड़ें':'Add to Wish List'}
+      </button>
+    </div>
+  </div>
+
+  <!-- Specifications -->
+  ${Object.keys(specs).length||specExtra.length?`
+  <div style="background:#fff;border-radius:4px;padding:20px;margin-top:14px;">
+    <h2 style="font-size:17px;font-weight:700;margin-bottom:14px;">${isHi?'उत्पाद विवरण':'Product Information'}</h2>
+    <table style="width:100%;border-collapse:collapse;">
+      <tbody>
+        ${specExtra.map(([k,v])=>`<tr><td style="padding:9px 14px;background:#f7f7f7;font-weight:600;font-size:13px;width:35%;border-bottom:1px solid #eee;">${k}</td><td style="padding:9px 14px;font-size:13px;border-bottom:1px solid #eee;">${v}</td></tr>`).join('')}
+        ${Object.entries(specs).map(([k,v])=>`<tr><td style="padding:9px 14px;background:#f7f7f7;font-weight:600;font-size:13px;width:35%;border-bottom:1px solid #eee;">${k}</td><td style="padding:9px 14px;font-size:13px;border-bottom:1px solid #eee;">${v}</td></tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`:''}
+
+  <!-- Reviews -->
+  <div id="reviews" style="background:#fff;border-radius:4px;padding:20px;margin-top:14px;">
+    <h2 style="font-size:17px;font-weight:700;margin-bottom:16px;">${isHi?'ग्राहक समीक्षाएं':'Customer Reviews'}</h2>
+    <div class="review-summary">
+      <div>
+        <div class="review-big-num">${p.rating||4}</div>
+        <div class="review-big-stars">${starStr(p.rating)}</div>
+        <div style="font-size:12px;color:var(--muted);text-align:center;">${isHi?'5 में से':'out of 5'}</div>
+      </div>
+      <div>
+        ${ratingBreakdown.map(([s,pct])=>`
+          <div class="review-bar-row">
+            <a class="review-bar-link" href="#reviews">${s} ${isHi?'स्टार':'star'}</a>
+            <div class="review-bar"><div class="review-bar-fill" style="width:${pct}%;"></div></div>
+            <span class="review-bar-pct">${pct}%</span>
+          </div>`).join('')}
+      </div>
+    </div>
+    <hr class="divider">
+    ${reviewsHtml||`<p style="color:var(--muted);text-align:center;padding:20px;">${isHi?'कोई समीक्षा नहीं':'No reviews yet'}</p>`}
+  </div>
+  `;
+}
+
+/* ── Helpers ── */
+function starStr(rating){
+  const r = Math.round((parseFloat(rating)||4)*2)/2;
+  return '★'.repeat(Math.floor(r)) + (r%1?'½':'') + '☆'.repeat(5-Math.ceil(r));
+}
+function calculateRatingBreakdown(reviews, avgRating){
+  if(!reviews||!reviews.length){
+    return [[5,78],[4,12],[3,5],[2,3],[1,2]];
+  }
+  const counts={1:0,2:0,3:0,4:0,5:0};
+  reviews.forEach(r=>{ counts[Math.min(5,Math.max(1,r.rating||4))]++; });
+  const total=reviews.length;
+  return [5,4,3,2,1].map(s=>[s,Math.round((counts[s]/total)*100)]);
+}
+
+/* ── Variant selection ── */
+function selectVariant(type, value, priceModifier, stock, el){
+  if(stock<=0) return;
+  SELECTED_VARIANTS[type]=value;
+  document.getElementById('varSel_'+type).textContent = value;
+  // Highlight selected
+  el.closest('.variant-options').querySelectorAll('.variant-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  // Update price
+  const base = parseFloat(CURRENT_PRODUCT.price);
+  const extraTotal = Object.keys(SELECTED_VARIANTS).reduce((sum,t)=>{
+    const variants = (CURRENT_PRODUCT.variants||[]);
+    const v = variants.find(x=>x.variant_type===t&&x.variant_value===SELECTED_VARIANTS[t]);
+    return sum + (v?parseFloat(v.price_modifier||0):0);
+  },0);
+  const total = base + extraTotal;
+  document.getElementById('displayPrice').firstChild.textContent = '₹'+total.toLocaleString('en-IN');
+  document.getElementById('buyBoxPrice').textContent = '₹'+total.toLocaleString('en-IN');
+  updatePrice();
+}
+
+function setImg(url, el){
+  const mainEl=document.getElementById('mainImgEl');
+  if(mainEl.tagName==='IMG') mainEl.src=url; else mainEl.textContent=url;
+  document.querySelectorAll('.thumb').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function getVariantLabel(){
+  const parts=Object.entries(SELECTED_VARIANTS).map(([t,v])=>`${t}: ${v}`);
+  return parts.length?parts.join(', '):'';
+}
+
+function getEffectivePrice(){
+
+    const base = parseFloat(CURRENT_PRODUCT.price);
+
+    const extra = Object.keys(SELECTED_VARIANTS).reduce((sum,t)=>{
+
+        const v = (CURRENT_PRODUCT.variants||[]).find(x=>
+            x.variant_type===t &&
+            x.variant_value===SELECTED_VARIANTS[t]
+        );
+
+        return sum + (v ? parseFloat(v.price_modifier||0) : 0);
+
+    },0);
+
+    return base + extra;
+}
+
+function addToCartProduct(){
+  const p=CURRENT_PRODUCT;
+  const qty=parseInt(document.getElementById('qty').value)||1;
+  const variant=getVariantLabel();
+  const price=getEffectivePrice();
+  for(let i=0;i<qty;i++) addToCart(p.id,p.name,price,variant);
+}
+
+function buyNowProduct(){
+  if(!isLoggedIn()){window._authCallback=buyNowProduct;showAuthPopup(buyNowProduct);return;}
+  addToCartProduct();
+  window.location.href='/checkout';
+}
+
+loadProduct();
+document.getElementById('langToggle').addEventListener('click',()=>setTimeout(loadProduct,50));
+
+
+function updatePrice() {
+
+    const qty = parseInt(document.getElementById("qty").value) || 1;
+
+    const base = parseFloat(CURRENT_PRODUCT.price);
+
+    const extra = Object.keys(SELECTED_VARIANTS).reduce((sum,t)=>{
+
+        const v = (CURRENT_PRODUCT.variants || []).find(x =>
+            x.variant_type===t &&
+            x.variant_value===SELECTED_VARIANTS[t]
+        );
+
+        return sum + (v ? parseFloat(v.price_modifier || 0) : 0);
+
+    },0);
+
+    const total = (base + extra) * qty;
+
+    document.getElementById("displayPrice").innerHTML =
+        `₹${total.toLocaleString('en-IN')}`;
+
+    document.getElementById("buyBoxPrice").textContent =
+        `₹${total.toLocaleString('en-IN')}`;
+}
+</script>

@@ -1,0 +1,49 @@
+<%- include('../partials/header') %>
+<div class="auth-wrap">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <img src="/images/logo.png" alt="ShopZone" style="height:40px;margin:0 auto 8px;">
+      <div class="logo-name" style="color:#131921;font-size:20px;">Shop<span style="color:#f90;">Zone</span></div>
+    </div>
+    <h1 class="auth-title" data-t="createAccount">Create Account</h1>
+    <div class="form-group">
+      <label data-t="nameLabel">Full Name</label>
+      <input type="text" id="regName" data-t-ph="namePlaceholder" placeholder="Enter your name">
+    </div>
+    <div class="form-group">
+      <label data-t="mobileLabel">Mobile Number</label>
+      <input type="tel" id="regMobile" maxlength="10" data-t-ph="mobilePlaceholder" placeholder="+91 Enter 10-digit number">
+    </div>
+    <button class="submit-btn" onclick="startRegister()" data-t="continueBtn">Continue</button>
+    <div id="regOtpSection" style="display:none;margin-top:16px;">
+      <div id="regOtpDemo" style="background:#fff3cd;border:1px solid #f59e0b;border-radius:6px;padding:10px;margin-bottom:12px;font-size:13px;text-align:center;"></div>
+      <div class="form-group">
+        <label data-t="otpLabel">Enter OTP</label>
+        <input type="text" id="regOtp" maxlength="6" placeholder="6-digit OTP" style="letter-spacing:6px;text-align:center;font-size:18px;">
+      </div>
+      <button class="submit-btn" onclick="verifyRegister()" data-t="verifyBtn">Verify & Create Account</button>
+    </div>
+    <div class="auth-link"><span data-t="helloSignIn">Already have an account?</span> <a href="/login" data-t="signInTitle">Sign In</a></div>
+  </div>
+</div>
+<%- include('../partials/footer') %>
+<script>
+function startRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const mobile = document.getElementById('regMobile').value.trim().replace(/\D/g,'');
+  const isHi = getLang() === 'hi';
+  if (!name) { alert(isHi?'कृपया नाम दर्ज करें':'Please enter your name'); return; }
+  if (mobile.length !== 10) { alert(isHi?'सही मोबाइल नंबर दर्ज करें':'Enter valid mobile number'); return; }
+  const otp = generateOTP(mobile);
+  document.getElementById('regOtpSection').style.display='block';
+  document.getElementById('regOtpDemo').innerHTML = `📱 <strong>${isHi?'डेमो OTP':'Demo OTP'}:</strong> <span style="font-size:20px;font-weight:800;letter-spacing:4px;">${otp}</span>`;
+}
+function verifyRegister() {
+  const otp = document.getElementById('regOtp').value.trim();
+  const isHi = getLang() === 'hi';
+  if (!verifyOTP(otp)) { alert(isHi?'गलत OTP':'Invalid OTP'); return; }
+  loginUser(document.getElementById('regName').value.trim(), sessionStorage.getItem('sz_otp_mobile'));
+  showToast(isHi?'✓ अकाउंट बना दिया गया!':'✓ Account created!');
+  setTimeout(() => window.location.href = '/', 800);
+}
+</script>

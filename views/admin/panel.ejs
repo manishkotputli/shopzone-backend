@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ShopZone Admin Panel</title>
+<style>
+/* ═══ RESET & BASE ═══ */
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#eaeded;color:#0f1111;font-size:14px;display:flex;flex-direction:column;min-height:100vh;}
+a{text-decoration:none;color:inherit;}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;}
+
+/* ═══ TOP HEADER ═══ */
+.topbar{background:#131921;color:#fff;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:fixed;top:0;left:0;right:0;z-index:300;}
+.topbar-left{display:flex;align-items:center;gap:10px;}
+.topbar-logo{font-size:20px;font-weight:900;color:#fff;letter-spacing:-0.5px;}
+.topbar-logo span{color:#f90;}
+.topbar-badge{background:#f90;color:#131921;font-size:10px;font-weight:800;padding:2px 8px;border-radius:12px;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.topbar-right span{font-size:12px;color:#ccc;}
+.btn-logout{background:#dc2626;color:#fff;border:none;padding:5px 14px;border-radius:4px;font-size:12px;font-weight:600;}
+.hamburger{background:none;border:none;color:#fff;font-size:22px;display:none;padding:4px;}
+
+/* ═══ BODY LAYOUT: sidebar + main ═══ */
+.body-wrap{display:flex;min-height:calc(100vh - 52px);margin-top:52px;}
+
+/* ═══ SIDEBAR ═══ */
+.sidebar{width:220px;background:#232f3e;flex-shrink:0;position:fixed;top:52px;left:0;bottom:0;overflow-y:auto;z-index:200;transition:transform .25s;}
+.sidebar-section{padding:14px 0 6px;border-bottom:1px solid rgba(255,255,255,.08);}
+.sidebar-section:last-child{border-bottom:none;}
+.sidebar-section-title{font-size:10px;font-weight:700;color:#8a9bb0;text-transform:uppercase;letter-spacing:1px;padding:0 16px 8px;}
+.sidebar-link{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;color:#d5dbdb;cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:background .15s;}
+.sidebar-link:hover{background:rgba(255,255,255,.07);color:#fff;}
+.sidebar-link.active{background:#f90;color:#131921;font-weight:700;}
+.sidebar-link .icon{font-size:16px;width:22px;text-align:center;flex-shrink:0;}
+.sidebar-link .badge-count{margin-left:auto;background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;}
+.sidebar-link.active .badge-count{background:rgba(0,0,0,.2);color:#131921;}
+.sidebar-store-info{padding:12px 16px;border-top:1px solid rgba(255,255,255,.08);}
+.sidebar-store-info p{font-size:11px;color:#8a9bb0;margin-bottom:2px;}
+.sidebar-store-info strong{font-size:12px;color:#d5dbdb;}
+
+/* ═══ MAIN CONTENT ═══ */
+.main{margin-left:220px;flex:1;padding:20px;min-width:0;}
+
+/* ═══ OVERLAY (mobile) ═══ */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199;}
+
+/* ═══ STATS GRID ═══ */
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
+.stat{background:#fff;border-radius:8px;padding:16px;text-align:center;border-left:4px solid #f90;box-shadow:0 2px 8px rgba(0,0,0,.07);}
+.stat .n{font-size:28px;font-weight:800;}
+.stat .l{font-size:11px;color:#565959;margin-top:3px;}
+.stat .sub{font-size:10px;color:#999;margin-top:2px;}
+
+/* ═══ PAGE HEADER ═══ */
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.page-header h1{font-size:20px;font-weight:700;}
+.breadcrumb{font-size:12px;color:#565959;margin-bottom:16px;}
+.breadcrumb span{color:#f90;}
+
+/* ═══ CARD ═══ */
+.card{background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.07);}
+.card h2{font-size:16px;font-weight:700;margin-bottom:14px;padding-bottom:10px;border-bottom:1.5px solid #f0f0f0;display:flex;align-items:center;gap:8px;}
+.card h2 span.sub{font-size:13px;font-weight:400;color:#565959;}
+
+/* ═══ TABLE ═══ */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead th{background:#131921;color:#fff;padding:10px 12px;text-align:left;font-size:12px;font-weight:600;position:sticky;top:0;}
+tbody td{padding:10px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;vertical-align:middle;}
+tbody tr:hover td{background:#fafafa;}
+tbody tr:last-child td{border-bottom:none;}
+.empty-row td{text-align:center;padding:32px;color:#999;}
+
+/* ═══ BUTTONS ═══ */
+.btn{display:inline-flex;align-items:center;gap:5px;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;padding:5px 12px;transition:opacity .15s;}
+.btn:hover{opacity:.88;}
+.btn-primary{background:#f90;color:#131921;font-size:13px;padding:9px 18px;border-radius:6px;font-weight:700;}
+.btn-secondary{background:#232f3e;color:#fff;font-size:13px;padding:9px 18px;border-radius:6px;}
+.btn-edit{background:#007185;color:#fff;}
+.btn-del{background:#dc2626;color:#fff;}
+.btn-toggle{background:#6c757d;color:#fff;}
+.btn-toggle.on{background:#067d62;}
+.btn-view{background:#6f42c1;color:#fff;}
+.btn-sm{padding:3px 8px;font-size:11px;}
+.btn-outline{background:#fff;border:1.5px solid #ddd;color:#333;}
+.btn-outline:hover{border-color:#f90;}
+
+/* ═══ FORMS ═══ */
+.fg{margin-bottom:12px;}
+.fg label{display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:#333;}
+.fg .hint{font-size:11px;color:#888;margin-top:3px;}
+.fg input,.fg select,.fg textarea{width:100%;padding:9px 11px;border:1.5px solid #ddd;border-radius:4px;font-size:13px;outline:none;transition:border-color .15s;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#f90;box-shadow:0 0 0 2px rgba(255,153,0,.15);}
+.fg input.err,.fg select.err{border-color:#dc2626;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.full{grid-column:1/-1;}
+.form-actions{display:flex;gap:10px;margin-top:18px;padding-top:16px;border-top:1.5px solid #f0f0f0;}
+
+/* ═══ SEARCH BAR ═══ */
+.search-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.search-bar input{flex:1;min-width:180px;padding:8px 12px;border:1.5px solid #ddd;border-radius:4px;font-size:13px;outline:none;}
+.search-bar input:focus{border-color:#f90;}
+.search-bar select{padding:8px 12px;border:1.5px solid #ddd;border-radius:4px;font-size:13px;outline:none;}
+
+/* ═══ PILLS & BADGES ═══ */
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;}
+.pill-blue{background:#e0f0ff;color:#007185;}
+.pill-green{background:#e6f9f0;color:#067d62;}
+.pill-red{background:#ffe4e4;color:#dc2626;}
+.pill-orange{background:#fff3e0;color:#e47911;}
+.pill-gray{background:#f0f0f0;color:#565959;}
+.pill-purple{background:#f3e8ff;color:#7c3aed;}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;}
+.dot-green{background:#067d62;}
+.dot-red{background:#dc2626;}
+.dot-gray{background:#999;}
+
+/* ═══ MESSAGES ═══ */
+.msg{padding:10px 14px;border-radius:4px;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.msg-success{background:#d1fae5;border:1px solid #34d399;color:#065f46;}
+.msg-error{background:#fee2e2;border:1px solid #f87171;color:#991b1b;}
+.msg-info{background:#e0f0ff;border:1px solid #7ec8e3;color:#004b6b;}
+.msg-warn{background:#fff3cd;border:1px solid #f59e0b;color:#856404;}
+
+/* ═══ DYNAMIC LIST ROWS ═══ */
+.dli{display:flex;gap:6px;margin-bottom:6px;align-items:center;}
+.dli input{flex:1;}
+.rm-btn{background:#dc2626;color:#fff;border:none;width:26px;height:26px;border-radius:4px;cursor:pointer;flex-shrink:0;font-size:14px;}
+.add-row-btn{background:#007185;color:#fff;border:none;padding:5px 13px;border-radius:4px;font-size:12px;cursor:pointer;margin-top:5px;display:inline-flex;align-items:center;gap:4px;}
+
+/* ═══ VARIANTS TABLE ═══ */
+.variants-wrap{overflow-x:auto;margin-top:8px;}
+.variants-wrap table{min-width:560px;}
+
+/* ═══ IMAGE PREVIEW ═══ */
+.imgprev{width:80px;height:80px;border:1.5px dashed #ddd;border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#f7f7f7;margin-top:6px;cursor:pointer;}
+.imgprev img{width:100%;height:100%;object-fit:contain;}
+.imgprev-lg{width:130px;height:130px;}
+.imgprev span{font-size:10px;color:#999;text-align:center;}
+
+/* ═══ STARS ═══ */
+.stars-inp{display:flex;gap:2px;margin-top:4px;}
+.star-r{font-size:26px;cursor:pointer;color:#ddd;transition:color .1s;line-height:1;}
+.star-r.on,.star-r:hover{color:#f0a500;}
+
+/* ═══ SECTION DIVIDER ═══ */
+.section-divider{border:none;border-top:1.5px solid #f0f0f0;margin:18px 0;}
+.section-sub-title{font-size:13px;font-weight:700;color:#131921;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+
+/* ═══ MODAL ═══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:none;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:#fff;border-radius:10px;padding:24px;width:90%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,.2);}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:14px;padding-bottom:10px;border-bottom:1.5px solid #f0f0f0;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;}
+
+/* ═══ QR PREVIEW ═══ */
+.qrprev{width:140px;height:140px;border:2px dashed #ddd;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#f7f7f7;margin-bottom:10px;}
+.qrprev img{width:100%;height:100%;object-fit:contain;}
+
+/* ═══ TABS (inner) ═══ */
+.inner-tabs{display:flex;gap:0;border-bottom:2px solid #f0f0f0;margin-bottom:16px;}
+.inner-tab{padding:8px 16px;font-size:13px;font-weight:600;border:none;background:none;color:#565959;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;}
+.inner-tab.active{color:#e47911;border-bottom-color:#e47911;}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .main{margin-left:0;}
+  .hamburger{display:block;}
+  .grid2,.grid3{grid-template-columns:1fr;}
+  .full{grid-column:1;}
+  .overlay.open{display:block;}
+}
+@media(max-width:500px){
+  .stats{grid-template-columns:1fr 1fr;}
+  .page-header{flex-direction:column;align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+
+
+
+<!-- ═══ TOP HEADER ═══ -->
+<div class="topbar">
+  <div class="topbar-left">
+    <button class="hamburger" onclick="toggleSidebar()">☰</button>
+    <div class="topbar-logo">Shop<span>Zone</span></div>
+    <span class="topbar-badge">Admin Panel</span>
+  </div>
+  <div class="topbar-right">
+    <span id="topStoreName">ShopZone</span>
+    <button class="btn-logout" onclick="window.location='/admin/logout'">Logout</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- ═══ BODY WRAP ═══ -->
+<div class="body-wrap">
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Dashboard</div>
+    <button class="sidebar-link active" onclick="navTo('dashboard')" id="nav-dashboard">
+      <span class="icon">📊</span> Dashboard
+    </button>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Catalogue</div>
+    <button class="sidebar-link" onclick="navTo('products')" id="nav-products">
+      <span class="icon">📦</span> Products
+      <span class="badge-count" id="sb-prod-count">0</span>
+    </button>
+    <button class="sidebar-link" onclick="navTo('add-product')" id="nav-add-product">
+      <span class="icon">➕</span> Add Product
+    </button>
+    <button class="sidebar-link" onclick="navTo('categories')" id="nav-categories">
+      <span class="icon">🗂️</span> Categories
+      <span class="badge-count" id="sb-cat-count">0</span>
+    </button>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Content</div>
+    <button class="sidebar-link" onclick="navTo('reviews')" id="nav-reviews">
+      <span class="icon">⭐</span> Reviews
+      <span class="badge-count" id="sb-rev-count">0</span>
+    </button>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Settings</div>
+    <button class="sidebar-link" onclick="navTo('payment')" id="nav-payment">
+      <span class="icon">💳</span> Payment
+    </button>
+    <button class="sidebar-link" onclick="navTo('bank')" id="nav-bank">
+      <span class="icon">🏦</span> Bank Details
+    </button>
+    <button class="sidebar-link" onclick="navTo('store')" id="nav-store">
+      <span class="icon">🏪</span> Store Settings
+    </button>
+  </div>
+
+  <div class="sidebar-store-info" id="sidebarStoreInfo">
+    <p>Store</p>
+    <strong id="sbStoreName">ShopZone</strong>
+  </div>
+</nav>
+
+<!-- ═══ MAIN CONTENT ═══ -->
+<main class="main" id="mainContent">
+  <!-- Pages rendered here -->
+</main>
+
+</div><!-- /body-wrap -->
+
+<!-- ═══ DELETE CONFIRM MODAL ═══ -->
+<div class="modal-overlay" id="delModal">
+  <div class="modal">
+    <h3>⚠️ Confirm Delete</h3>
+    <p id="delModalMsg" style="font-size:14px;color:#333;margin-bottom:8px;"></p>
+    <p style="font-size:12px;color:#dc2626;">This action cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('delModal')">Cancel</button>
+      <button class="btn btn-del" id="delModalConfirm">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PRODUCT DETAIL MODAL ═══ -->
+<div class="modal-overlay" id="viewModal">
+  <div class="modal" style="max-width:600px;">
+    <h3 id="viewModalTitle">Product Details</h3>
+    <div id="viewModalBody" style="font-size:13px;max-height:60vh;overflow-y:auto;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('viewModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+
+'use strict';
+// ════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════
+let ALL_PRODS = [], ALL_CATS = [], ALL_REVS = [];
+let META = { categories: [], brands: [] };
+let CFG = {};
+let RATING_VAL = 5;
+let CURRENT_PAGE = 'dashboard';
+let DELETE_CALLBACK = null;
+
+// ════════════════════════════════════════════════════════
+// SIDEBAR / NAVIGATION
+// ════════════════════════════════════════════════════════
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+}
+
+function navTo(page, closeSidebar = true) {
+  CURRENT_PAGE = page;
+  // Update active nav link
+  document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+  const navEl = document.getElementById('nav-' + page);
+  if (navEl) navEl.classList.add('active');
+  // Close sidebar on mobile
+  if (closeSidebar && window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('open');
+  }
+  // Render page
+  renderPage(page);
+}
+
+function renderPage(page) {
+  const main = document.getElementById('mainContent');
+  switch(page) {
+    case 'dashboard':    renderDashboard(); break;
+    case 'products':     renderProducts(); break;
+    case 'add-product':  renderAddProduct(EDIT_PRODUCT); break;
+    case 'categories':   renderCategories(); break;
+    case 'reviews':      renderReviews(); break;
+    case 'payment':      renderPayment(); break;
+    case 'bank':         renderBank(); break;
+    case 'store':        renderStore(); break;
+    default:             main.innerHTML = '<p>Page not found</p>';
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// API HELPERS
+// ════════════════════════════════════════════════════════
+async function api(url, opts = {}) {
+  try {
+    const res = await fetch(url, opts);
+    return await res.json();
+  } catch(e) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// MODAL HELPERS
+// ════════════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function confirmDelete(msg, cb) {
+  document.getElementById('delModalMsg').textContent = msg;
+  DELETE_CALLBACK = cb;
+  document.getElementById('delModalConfirm').onclick = () => { closeModal('delModal'); cb(); };
+  openModal('delModal');
+}
+
+// ════════════════════════════════════════════════════════
+// MESSAGES
+// ════════════════════════════════════════════════════════
+function showMsg(id, msg, type = 'success') {
+  const cls = { success: 'msg-success', error: 'msg-error', info: 'msg-info', warn: 'msg-warn' };
+  const icon = { success: '✓', error: '✗', info: 'ℹ', warn: '⚠' };
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = `<div class="msg ${cls[type]}">${icon[type]} ${msg}</div>`;
+  setTimeout(() => { if(el) el.innerHTML = ''; }, 3500);
+}
+
+// ════════════════════════════════════════════════════════
+// LOAD INITIAL DATA
+// ════════════════════════════════════════════════════════
+async function loadAll() {
+  // Products
+  const pd = await api('/admin/api/products');
+  ALL_PRODS = pd.products || [];
+
+  // Meta
+  const md = await api('/admin/api/meta');
+  META = md || { categories: [], brands: [] };
+
+  // Reviews
+  const rd = await api('/admin/api/reviews');
+  ALL_REVS = rd.reviews || [];
+
+  // Config
+  const cd = await api('/admin/api/config');
+  CFG = {};
+  (cd.configs || []).forEach(c => CFG[c.config_key] = c.config_value);
+
+  // Build categories from products
+  const catSet = {};
+  ALL_PRODS.forEach(p => { catSet[p.category] = (catSet[p.category] || 0) + 1; });
+  ALL_CATS = Object.entries(catSet).map(([name, count]) => ({ name, count }));
+
+  // Update sidebar badges
+  document.getElementById('sb-prod-count').textContent = ALL_PRODS.length;
+  document.getElementById('sb-cat-count').textContent = ALL_CATS.length;
+  document.getElementById('sb-rev-count').textContent = ALL_REVS.length;
+
+  // Store name
+  const sn = CFG.store_name || 'ShopZone';
+  document.getElementById('sbStoreName').textContent = sn;
+  document.getElementById('topStoreName').textContent = sn;
+  document.getElementById('sidebarStoreInfo').querySelector('strong').textContent = sn;
+}
+
+// ════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════
+function renderDashboard() {
+  const lowStock = ALL_PRODS.filter(p => p.stock_quantity < 10 && p.stock_quantity > 0);
+  const outStock = ALL_PRODS.filter(p => p.stock_quantity === 0);
+  const featured = ALL_PRODS.filter(p => p.is_featured);
+  const totalValue = ALL_PRODS.reduce((s, p) => s + parseFloat(p.price) * p.stock_quantity, 0);
+
+  document.getElementById('mainContent').innerHTML = `
+  <div class="breadcrumb">Admin / <span>Dashboard</span></div>
+  <div class="page-header"><h1>📊 Dashboard</h1></div>
+
+  <div class="stats">
+    <div class="stat" style="border-left-color:#f90;"><div class="n" style="color:#f90;">${ALL_PRODS.length}</div><div class="l">Total Products</div><div class="sub">${featured.length} featured</div></div>
+    <div class="stat" style="border-left-color:#007185;"><div class="n" style="color:#007185;">${ALL_CATS.length}</div><div class="l">Categories</div></div>
+    <div class="stat" style="border-left-color:#dc2626;"><div class="n" style="color:#dc2626;">${outStock.length}</div><div class="l">Out of Stock</div></div>
+    <div class="stat" style="border-left-color:#f59e0b;"><div class="n" style="color:#f59e0b;">${lowStock.length}</div><div class="l">Low Stock</div><div class="sub">&lt; 10 units</div></div>
+    <div class="stat" style="border-left-color:#067d62;"><div class="n" style="color:#067d62;">${ALL_REVS.length}</div><div class="l">Reviews</div></div>
+    <div class="stat" style="border-left-color:#7c3aed;"><div class="n" style="color:#7c3aed;font-size:18px;">₹${Math.round(totalValue/1000)}K</div><div class="l">Inventory Value</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex-wrap:wrap;">
+    <!-- Recent Products -->
+    <div class="card">
+      <h2>📦 Recent Products</h2>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Action</th></tr></thead>
+          <tbody>
+            ${ALL_PRODS.slice(0,6).map(p=>`
+            <tr>
+              <td><strong style="font-size:12px;">${p.name.substring(0,30)}${p.name.length>30?'...':''}</strong></td>
+              <td>₹${parseFloat(p.price).toLocaleString('en-IN')}</td>
+              <td><span class="pill ${p.stock_quantity===0?'pill-red':p.stock_quantity<10?'pill-orange':'pill-green'}">${p.stock_quantity}</span></td>
+              <td><button class="btn btn-edit btn-sm" onclick="editProduct(${p.id})">Edit</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;"><button class="btn btn-outline" onclick="navTo('products')">View All →</button></div>
+    </div>
+
+    <!-- Recent Reviews -->
+    <div class="card">
+      <h2>⭐ Recent Reviews</h2>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Reviewer</th><th>Rating</th><th>Product</th></tr></thead>
+          <tbody>
+            ${ALL_REVS.slice(0,6).map(r=>`
+            <tr>
+              <td><strong>${r.reviewer_name}</strong></td>
+              <td>${'★'.repeat(r.rating||5)}</td>
+              <td><span class="pill pill-gray">${r.product_id?'#'+r.product_id:'All'}</span></td>
+            </tr>`).join('')||'<tr class="empty-row"><td colspan="3">No reviews yet</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;"><button class="btn btn-outline" onclick="navTo('reviews')">Manage Reviews →</button></div>
+    </div>
+  </div>
+
+  ${lowStock.length?`
+  <div class="card" style="border-left:4px solid #f59e0b;">
+    <h2>⚠️ Low Stock Alert</h2>
+    <div class="tbl-wrap">
+      <table><thead><tr><th>Product</th><th>Category</th><th>Stock</th><th>Action</th></tr></thead>
+      <tbody>${lowStock.map(p=>`<tr>
+        <td><strong>${p.name.substring(0,40)}...</strong></td>
+        <td><span class="pill pill-blue">${p.category}</span></td>
+        <td><span class="pill pill-orange">${p.stock_quantity} left</span></td>
+        <td><button class="btn btn-edit btn-sm" onclick="editProduct(${p.id})">Update Stock</button></td>
+      </tr>`).join('')}</tbody></table>
+    </div>
+  </div>`:''}
+  `;
+}
+
+// ════════════════════════════════════════════════════════
+// PRODUCTS LIST
+// ════════════════════════════════════════════════════════
+function renderProducts() {
+  document.getElementById('mainContent').innerHTML = `
+  <div class="breadcrumb">Admin / <span>Products</span></div>
+  <div class="page-header">
+    <h1>📦 Products <span style="font-size:14px;font-weight:400;color:#565959;" id="prodCountLbl"></span></h1>
+    <button class="btn btn-primary" onclick="navTo('add-product')">➕ Add Product</button>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" id="srch" placeholder="🔍 Search name / brand / SKU..." oninput="filterTable()" autocomplete="off">
+    <select id="catF" onchange="filterTable()">
+      <option value="">All Categories</option>
+      ${ALL_CATS.map(c=>`<option value="${c.name}">${c.name}</option>`).join('')}
+    </select>
+    <select id="statusF" onchange="filterTable()">
+      <option value="">All Status</option>
+      <option value="active">Active</option>
+      <option value="inactive">Inactive</option>
+      <option value="out">Out of Stock</option>
+      <option value="low">Low Stock</option>
+    </select>
+  </div>
+
+  <div class="card" style="padding:0;">
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:60px;">Image</th>
+            <th>Product Name</th>
+            <th>Brand</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th>MRP</th>
+            <th>Disc%</th>
+            <th>Stock</th>
+            <th>Rating</th>
+            <th>Badge</th>
+            <th>Status</th>
+            <th style="min-width:120px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="prodTb"></tbody>
+      </table>
+    </div>
+  </div>`;
+
+  filterTable();
+}
+
+function filterTable() {
+  const s = (document.getElementById('srch')?.value || '').toLowerCase();
+  const cf = document.getElementById('catF')?.value || '';
+  const sf = document.getElementById('statusF')?.value || '';
+  let ps = ALL_PRODS;
+  if (s) ps = ps.filter(p => p.name.toLowerCase().includes(s) || (p.brand||'').toLowerCase().includes(s) || (p.sku||'').toLowerCase().includes(s));
+  if (cf) ps = ps.filter(p => p.category === cf);
+  if (sf === 'active')   ps = ps.filter(p => p.is_active && p.stock_quantity > 0);
+  if (sf === 'inactive') ps = ps.filter(p => !p.is_active);
+  if (sf === 'out')      ps = ps.filter(p => p.stock_quantity === 0);
+  if (sf === 'low')      ps = ps.filter(p => p.stock_quantity > 0 && p.stock_quantity < 10);
+
+  document.getElementById('prodCountLbl').textContent = `(${ps.length} of ${ALL_PRODS.length})`;
+
+  const badgeClass = b => ({ HOT:'pill-orange', NEW:'pill-green', SALE:'pill-red', TRENDING:'pill-purple' }[b] || 'pill-gray');
+
+  document.getElementById('prodTb').innerHTML = ps.length ? ps.map(p => {
+    const img = p.image_url
+      ? `<img src="${p.image_url}" style="width:46px;height:46px;object-fit:contain;border-radius:4px;background:#f7f7f7;">`
+      : `<span style="font-size:28px;">${p.emoji||'📦'}</span>`;
+    return `<tr>
+      <td>${img}</td>
+      <td style="max-width:200px;">
+        <strong style="font-size:12px;line-height:1.4;">${p.name}</strong>
+        ${p.sku?`<br><span style="font-size:10px;color:#999;">SKU: ${p.sku}</span>`:''}
+      </td>
+      <td>${p.brand||'-'}</td>
+      <td><span class="pill pill-blue">${p.category||'-'}</span></td>
+      <td><strong>₹${parseFloat(p.price).toLocaleString('en-IN')}</strong></td>
+      <td>${p.original_price?'₹'+parseFloat(p.original_price).toLocaleString('en-IN'):'-'}</td>
+      <td>${p.discount_percent?`<span class="pill pill-red">${p.discount_percent}%</span>`:'-'}</td>
+      <td>
+        <span class="pill ${p.stock_quantity===0?'pill-red':p.stock_quantity<10?'pill-orange':'pill-green'}">
+          ${p.stock_quantity}
+        </span>
+      </td>
+      <td><span style="color:#f0a500;">${'★'.repeat(Math.round(p.rating||4))}</span> ${p.rating||4}</td>
+      <td>${p.badge?`<span class="pill ${badgeClass(p.badge)}">${p.badge}</span>`:'-'}</td>
+      <td>
+        <span class="pill ${p.is_active?'pill-green':'pill-gray'}">
+          <span class="dot ${p.is_active?'dot-green':'dot-gray'}"></span>
+          ${p.is_active?'Active':'Inactive'}
+        </span>
+      </td>
+      <td>
+        <button class="btn btn-view btn-sm" onclick="viewProduct(${p.id})" title="View">👁</button>
+        <button class="btn btn-edit btn-sm" onclick="editProduct(${p.id})" title="Edit">✏️</button>
+        <button class="btn btn-toggle btn-sm ${p.is_active?'':'on'}" onclick="toggleActive(${p.id},${!p.is_active})" title="${p.is_active?'Deactivate':'Activate'}">${p.is_active?'🔴':'🟢'}</button>
+        <button class="btn btn-del btn-sm" onclick="deleteProduct(${p.id},'${p.name.replace(/'/g,"\\'")}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('') : '<tr class="empty-row"><td colspan="12">No products found</td></tr>';
+}
+
+async function viewProduct(id) {
+  const d = await api('/admin/api/products/' + id);
+  if (!d.success) return;
+  const p = d.product;
+  const specs = p.specifications || {};
+  document.getElementById('viewModalTitle').textContent = p.name.substring(0,50);
+  document.getElementById('viewModalBody').innerHTML = `
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+      <div style="font-size:48px;background:#f7f7f7;width:80px;height:80px;display:flex;align-items:center;justify-content:center;border-radius:6px;">
+        ${p.image_url?`<img src="${p.image_url}" style="width:100%;height:100%;object-fit:contain;">`:p.emoji||'📦'}
+      </div>
+      <div style="flex:1;">
+        <div style="margin-bottom:4px;"><strong>Brand:</strong> ${p.brand||'-'}</div>
+        <div style="margin-bottom:4px;"><strong>Category:</strong> ${p.category||'-'} ${p.sub_category?`› ${p.sub_category}`:''}</div>
+        <div style="margin-bottom:4px;"><strong>SKU:</strong> ${p.sku||'-'}</div>
+        <div style="margin-bottom:4px;"><strong>Price:</strong> ₹${parseFloat(p.price).toLocaleString('en-IN')} ${p.original_price?`<s style="color:#999;">₹${parseFloat(p.original_price).toLocaleString('en-IN')}</s>`:''}</div>
+        <div><strong>Stock:</strong> <span class="pill ${p.stock_quantity===0?'pill-red':'pill-green'}">${p.stock_quantity}</span></div>
+      </div>
+    </div>
+    ${p.description?`<p style="font-size:12px;color:#333;margin-bottom:10px;line-height:1.6;">${p.description}</p>`:''}
+    ${Object.keys(specs).length?`
+    <table style="width:100%;font-size:12px;border-collapse:collapse;">
+      ${Object.entries(specs).map(([k,v])=>`<tr><td style="background:#f7f7f7;padding:5px 8px;font-weight:600;width:40%;border-bottom:1px solid #eee;">${k}</td><td style="padding:5px 8px;border-bottom:1px solid #eee;">${v}</td></tr>`).join('')}
+    </table>`:''}
+    ${(p.variants||[]).length?`<div style="margin-top:10px;font-size:12px;"><strong>Variants (${p.variants.length}):</strong> ${p.variants.map(v=>`<span class="pill pill-blue" style="margin:2px;">${v.variant_type}: ${v.variant_value}</span>`).join('')}</div>`:''}
+  `;
+  openModal('viewModal');
+}
+
+async function editProduct(id) {
+  const d = await api('/admin/api/products/' + id);
+  if (!d.success) return;
+  renderAddProduct(d.product);
+  navTo('add-product', false);
+}
+
+async function toggleActive(id, newState) {
+  const d = await api('/admin/api/products/' + id, {
+    method: 'PUT',
+    body: (() => { const fd = new FormData(); fd.append('is_active', newState); return fd; })()
+  });
+  if (d.success) {
+    const idx = ALL_PRODS.findIndex(p => p.id === id);
+    if (idx > -1) ALL_PRODS[idx].is_active = newState;
+    filterTable();
+  }
+}
+
+function deleteProduct(id, name) {
+  confirmDelete(`Delete product "${name.substring(0,40)}"?`, async () => {
+    const d = await api('/admin/api/products/' + id, { method: 'DELETE' });
+    if (d.success) {
+      ALL_PRODS = ALL_PRODS.filter(p => p.id !== id);
+      document.getElementById('sb-prod-count').textContent = ALL_PRODS.length;
+      filterTable();
+    } else alert('Error: ' + d.error);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// ADD / EDIT PRODUCT
+// ════════════════════════════════════════════════════════
+let EDIT_PRODUCT = null;
+
+function renderAddProduct(product) {
+   console.log("EDIT PRODUCT =", product);
+
+  EDIT_PRODUCT = product;
+  const isEdit = !!product;
+  const p = product || {};
+
+  document.getElementById('mainContent').innerHTML = `
+  <div class="breadcrumb">Admin / <a onclick="navTo('products')" style="cursor:pointer;color:#007185;">Products</a> / <span>${isEdit?'Edit Product':'Add Product'}</span></div>
+  <div class="page-header">
+    <h1>${isEdit?'✏️ Edit Product #'+p.id:'➕ Add New Product'}</h1>
+    ${isEdit?`<button class="btn btn-del" onclick="deleteProduct(${p.id},'${(p.name||'').replace(/'/g,"\\'")}')">🗑️ Delete</button>`:''}
+  </div>
+  <div id="formMsg"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start;">
+    <!-- Main form -->
+    <div>
+      <!-- Basic Info -->
+      <div class="card">
+        <h2>📋 Basic Information</h2>
+        <div class="fg full">
+          <label>Product Name *</label>
+          <input id="pName" placeholder="Enter full product name" value="${esc(p.name)}">
+        </div>
+        <div class="grid2">
+          <div class="fg">
+            <label>Brand *</label>
+            <input id="pBrand" list="brandDL" placeholder="e.g. Samsung" value="${esc(p.brand)}">
+            <datalist id="brandDL">${(META.brands||[]).map(b=>`<option value="${b}">`).join('')}</datalist>
+          </div>
+          <div class="fg">
+            <label>Category *</label>
+            <input id="pCat" list="catDL" placeholder="e.g. Electronics" value="${esc(p.category)}">
+            <datalist id="catDL">${(META.categories||[]).map(c=>`<option value="${c}">`).join('')}</datalist>
+          </div>
+          <div class="fg">
+            <label>Sub-Category</label>
+            <input id="pSubCat" placeholder="e.g. Smartphones" value="${esc(p.sub_category)}">
+          </div>
+          <div class="fg">
+            <label>SKU / Product Code</label>
+            <input id="pSku" placeholder="e.g. SAM-S24-256" value="${esc(p.sku)}">
+          </div>
+          <div class="fg">
+            <label>Seller Name</label>
+            <input id="pSeller" value="${esc(p.seller_name)||'ShopZone Official'}">
+          </div>
+          <div class="fg">
+            <label>Country of Origin</label>
+            <input id="pOrigin" value="${esc(p.country_of_origin)||'India'}">
+          </div>
+        </div>
+        <div class="fg">
+          <label>Description</label>
+          <textarea id="pDesc" rows="3" placeholder="Full product description...">${esc(p.description)}</textarea>
+        </div>
+        <div class="fg">
+          <label>Search Tags (comma separated)</label>
+          <input id="pTags" placeholder="e.g. samsung, galaxy, smartphone" value="${esc(p.tags)}">
+          <div class="hint">Used for search — add all relevant keywords</div>
+        </div>
+      </div>
+
+      <!-- Pricing -->
+      <div class="card">
+        <h2>💰 Pricing & Inventory</h2>
+        <div class="grid3">
+          <div class="fg">
+            <label>Selling Price (₹) *</label>
+            <input id="pPrice" type="number" min="1" placeholder="9999" value="${p.price||''}">
+          </div>
+          <div class="fg">
+            <label>MRP / Original Price (₹)</label>
+            <input id="pOrig" type="number" placeholder="14999" value="${p.original_price||''}">
+          </div>
+          <div class="fg">
+            <label>Discount %</label>
+            <input id="pDisc" type="number" min="0" max="99" placeholder="auto-calc" value="${p.discount_percent||''}">
+            <div class="hint">Leave blank to auto-calculate from price & MRP</div>
+          </div>
+          <div class="fg">
+            <label>Stock Quantity</label>
+            <input id="pStock" type="number" value="${p.stock_quantity!==undefined?p.stock_quantity:100}">
+          </div>
+          <div class="fg">
+            <label>Weight (grams)</label>
+            <input id="pWt" type="number" placeholder="250" value="${p.weight_grams||''}">
+          </div>
+          <div class="fg">
+            <label>Warranty (months)</label>
+            <input id="pWarr" type="number" value="${p.warranty_months||0}">
+          </div>
+        </div>
+      </div>
+
+      <!-- Product Details -->
+      <div class="card">
+        <h2>📝 Product Details</h2>
+        <div class="fg">
+          <label>Highlights / Key Features</label>
+          <div id="hlList">${(p.highlights||[]).map(h=>`<div class="dli"><input type="text" value="${esc(h)}"><button class="rm-btn" onclick="this.parentElement.remove()">✕</button></div>`).join('')}</div>
+          <button class="add-row-btn" onclick="addDRow('hlList','e.g. 6.8 inch AMOLED 120Hz display')">+ Add Feature</button>
+        </div>
+        <hr class="section-divider">
+        <div class="fg">
+          <label>Specifications (Key : Value)</label>
+          <div id="specList">${Object.entries(p.specifications||{}).map(([k,v])=>`<div class="dli"><input type="text" placeholder="Key" value="${esc(k)}" style="max-width:160px;"><input type="text" placeholder="Value" value="${esc(v)}"><button class="rm-btn" onclick="this.parentElement.remove()">✕</button></div>`).join('')}</div>
+          <button class="add-row-btn" onclick="addSpecRow()">+ Add Spec</button>
+        </div>
+        <hr class="section-divider">
+        <div class="fg">
+          <label>What's in the Box</label>
+          <div id="boxList">${(p.in_box||[]).map(b=>`<div class="dli"><input type="text" value="${esc(b)}"><button class="rm-btn" onclick="this.parentElement.remove()">✕</button></div>`).join('')}</div>
+          <button class="add-row-btn" onclick="addDRow('boxList','e.g. Charger Cable')">+ Add Item</button>
+        </div>
+      </div>
+
+      <!-- Variants -->
+      <div class="card">
+        <h2>🎨 Variants (Size / Color / Storage)</h2>
+        <p style="font-size:12px;color:#565959;margin-bottom:12px;">Add variants if this product has different sizes, colors, or storage options.</p>
+        <div class="variants-wrap">
+          <table style="min-width:580px;">
+            <thead><tr><th>Type</th><th>Value</th><th>Price Modifier (₹)</th><th>Stock</th><th>Sort Order</th><th></th></tr></thead>
+            <tbody id="variantTb">
+              ${(p.variants||[]).map((v,i)=>`<tr>
+                <td><input type="text" list="varTypeDL" value="${esc(v.variant_type)}" style="width:110px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
+                <td><input type="text" value="${esc(v.variant_value)}" style="width:100px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
+                <td><input type="number" value="${v.price_modifier||0}" style="width:80px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
+                <td><input type="number" value="${v.stock||0}" style="width:70px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
+                <td><input type="number" value="${i}" style="width:50px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
+                <td><button class="rm-btn" onclick="this.closest('tr').remove()">✕</button></td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+          <datalist id="varTypeDL"><option>Size</option><option>Color</option><option>Storage</option><option>Material</option><option>Pack</option></datalist>
+        </div>
+        <button class="add-row-btn" style="margin-top:10px;" onclick="addVariantRow()">+ Add Variant</button>
+      </div>
+    </div>
+
+    <!-- Right sidebar -->
+    <div>
+      <!-- Publish -->
+      <div class="card">
+        <h2>🚀 Publish</h2>
+        <div class="fg">
+          <label>Status</label>
+          <select id="pActive">
+            <option value="true" ${p.is_active!==false?'selected':''}>✅ Active (Visible)</option>
+            <option value="false" ${p.is_active===false?'selected':''}>⛔ Inactive (Hidden)</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Badge</label>
+          <select id="pBadge">
+            <option value="" ${!p.badge?'selected':''}>— None —</option>
+            <option value="HOT" ${p.badge==='HOT'?'selected':''}>🔥 HOT</option>
+            <option value="NEW" ${p.badge==='NEW'?'selected':''}>✨ NEW</option>
+            <option value="SALE" ${p.badge==='SALE'?'selected':''}>🏷 SALE</option>
+            <option value="TRENDING" ${p.badge==='TRENDING'?'selected':''}>📈 TRENDING</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Featured on Homepage</label>
+          <select id="pFeatured">
+            <option value="false" ${!p.is_featured?'selected':''}>No</option>
+            <option value="true" ${p.is_featured?'selected':''}>✅ Yes</option>
+          </select>
+        </div>
+        <div class="form-actions" style="flex-direction:column;">
+          <button class="btn btn-primary" style="width:100%;" onclick="saveProduct()">
+            💾 ${isEdit?'Update Product':'Add Product'}
+          </button>
+          <button class="btn btn-outline" style="width:100%;" onclick="navTo('products')">↺ Cancel</button>
+        </div>
+      </div>
+
+      <!-- Image & Emoji -->
+      <div class="card">
+        <h2>🖼️ Product Image</h2>
+        <div class="fg">
+          <label>Upload Image</label>
+          <input type="file" id="pImg" accept="image/*" multiple onchange="prevImg(this,'imgP')">
+         <div id="imgP" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">
+    ${
+        p.images && p.images.length
+        ? p.images.map(img => `
+            <div class="imgprev imgprev-lg">
+                <img src="${img}">
+            </div>
+        `).join("")
+        : `
+            <div class="imgprev imgprev-lg">
+                <span>Click to upload</span>
+            </div>
+        `
+    }
+</div>
+          <input type="hidden" id="pImgUrl" value="${p.image_url||''}">
+        </div>
+        <div class="fg">
+          <label>Emoji Icon (shown if no image)</label>
+          <input id="pEmoji" maxlength="4" value="${p.emoji||'📦'}" style="font-size:22px;text-align:center;">
+        </div>
+      </div>
+
+      <!-- Rating -->
+      <div class="card">
+        <h2>⭐ Rating</h2>
+        <div class="fg">
+          <label>Rating (0–5)</label>
+          <input id="pRating" type="number" step="0.1" min="0" max="5" value="${p.rating||4.5}">
+        </div>
+        <div class="fg">
+          <label>Number of Reviews</label>
+          <input id="pReviews" type="number" value="${p.reviews||0}">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <input type="hidden" id="editId" value="${p.id||''}">
+  `;
+}
+
+function esc(v) { return (v||'').toString().replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function addDRow(listId, ph, val = '') {
+  const d = document.createElement('div'); d.className = 'dli';
+  d.innerHTML = `<input type="text" placeholder="${ph}" value="${val.replace(/"/g,'&quot;')}"><button type="button" class="rm-btn" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById(listId).appendChild(d);
+}
+function addSpecRow(k = '', v = '') {
+  const d = document.createElement('div'); d.className = 'dli';
+  d.innerHTML = `<input type="text" placeholder="Key e.g. RAM" value="${k.replace(/"/g,'&quot;')}" style="max-width:160px;"><input type="text" placeholder="Value e.g. 8GB" value="${v.replace(/"/g,'&quot;')}"><button type="button" class="rm-btn" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('specList').appendChild(d);
+}
+function addVariantRow(type='',value='',pm=0,stock=0) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="text" list="varTypeDL" placeholder="Size/Color" value="${type}" style="width:110px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
+    <td><input type="text" placeholder="M / Red" value="${value}" style="width:100px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
+    <td><input type="number" value="${pm}" style="width:80px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
+    <td><input type="number" value="${stock}" style="width:70px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
+    <td><input type="number" value="0" style="width:50px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
+    <td><button class="rm-btn" onclick="this.closest('tr').remove()">✕</button></td>`;
+  document.getElementById('variantTb').appendChild(tr);
+}
+function getDList(id) { return [...document.querySelectorAll(`#${id} input`)].map(i=>i.value.trim()).filter(Boolean); }
+function getSpecs() {
+  const rows = document.querySelectorAll('#specList .dli'), o = {};
+  rows.forEach(d => { const is = d.querySelectorAll('input'); const k = is[0].value.trim(), v = is[1].value.trim(); if(k&&v) o[k]=v; });
+  return o;
+}
+function getVariants() {
+  return [...document.querySelectorAll('#variantTb tr')].map((tr,i) => {
+    const ins = tr.querySelectorAll('input');
+    return { variant_type: ins[0].value.trim(), variant_value: ins[1].value.trim(), price_modifier: parseFloat(ins[2].value)||0, stock: parseInt(ins[3].value)||0, sort_order: i };
+  }).filter(v => v.variant_type && v.variant_value);
+}
+function prevImg(input, previewId) {
+
+    const preview = document.getElementById(previewId);
+
+    preview.innerHTML = "";
+
+    if (!input.files.length) {
+        preview.innerHTML = `
+            <div class="imgprev imgprev-lg">
+                <span>Click to upload</span>
+            </div>
+        `;
+        return;
+    }
+
+    [...input.files].forEach(file => {
+
+        const reader = new FileReader();
+
+        reader.onload = function(e){
+
+            const div = document.createElement("div");
+
+            div.className = "imgprev imgprev-lg";
+
+            div.innerHTML = `
+                <img src="${e.target.result}">
+            `;
+
+            preview.appendChild(div);
+
+        };
+
+        reader.readAsDataURL(file);
+
+    });
+
+}
+
+async function saveProduct() {
+  const eid = document.getElementById('editId').value;
+  const name = document.getElementById('pName').value.trim();
+  const price = document.getElementById('pPrice').value;
+  const cat = document.getElementById('pCat').value.trim();
+  if (!name || !price || !cat) {
+    showMsg('formMsg', 'Product Name, Price and Category are required!', 'error'); return;
+  }
+
+  // Auto-calc discount
+  let disc = document.getElementById('pDisc').value;
+  const orig = document.getElementById('pOrig').value;
+  if (!disc && orig && parseFloat(orig) > parseFloat(price)) {
+    disc = Math.round((1 - parseFloat(price)/parseFloat(orig)) * 100);
+    document.getElementById('pDisc').value = disc;
+  }
+
+  const fd = new FormData();
+  const fields = [['name','pName'],['brand','pBrand'],['category','pCat'],['sub_category','pSubCat'],['sku','pSku'],['emoji','pEmoji'],['price','pPrice'],['original_price','pOrig'],['discount_percent','pDisc'],['stock_quantity','pStock'],['rating','pRating'],['review_count','pReviews'],['badge','pBadge'],['is_featured','pFeatured'],['is_active','pActive'],['warranty_months','pWarr'],['weight_grams','pWt'],['country_of_origin','pOrigin'],['seller_name','pSeller'],['tags','pTags'],['description','pDesc']];
+  fields.forEach(([k, id]) => { const el = document.getElementById(id); if(el) fd.append(k, el.value); });
+  fd.append('highlights', JSON.stringify(getDList('hlList')));
+  fd.append('in_box', JSON.stringify(getDList('boxList')));
+  fd.append('specifications', JSON.stringify(getSpecs()));
+
+  // const f = document.getElementById('pImg');
+  // if (f && f.files[0]) fd.append('image', f.files);
+
+  const files = document.getElementById("pImg").files;
+
+for (const file of files) {
+    fd.append("images", file);
+}
+  const btn = document.querySelector('[onclick="saveProduct()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+  const url = eid ? '/admin/api/products/' + eid : '/admin/api/products';
+  const d = await api(url, { method: eid ? 'PUT' : 'POST', body: fd });
+for (const pair of fd.entries()) {
+    console.log(pair[0], pair[1]);
+}
+
+  if (d.success) {
+    const pid = d.product.id || eid;
+    const vars = getVariants();
+   
+    await api('/admin/api/products/' + pid + '/variants', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ variants: vars })
+    });
+    showMsg('formMsg', eid ? '✅ Product updated successfully!' : '✅ Product added successfully!', 'success');
+    // Refresh products list
+    const pd = await api('/admin/api/products');
+    ALL_PRODS = pd.products || [];
+    document.getElementById('sb-prod-count').textContent = ALL_PRODS.length;
+    await loadAll();
+    if (!eid) { renderAddProduct(null); }
+    if (btn) { btn.disabled = false; btn.textContent = '💾 ' + (eid ? 'Update Product' : 'Add Product'); }
+  } else {
+    showMsg('formMsg', '❌ Error: ' + d.error, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Save'; }
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// CATEGORIES (separate table)
+// ════════════════════════════════════════════════════════
+function renderCategories() {
+  document.getElementById('mainContent').innerHTML = `
+  <div class="breadcrumb">Admin / <span>Categories</span></div>
+  <div class="page-header">
+    <h1>🗂️ Categories</h1>
+    <button class="btn btn-primary" onclick="openAddCat()">➕ Add Category</button>
+  </div>
+
+  <div class="card" style="padding:0;">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Category Name</th><th>Products</th><th>Sub-Categories</th><th>Top Brands</th><th>Avg Price</th><th>Actions</th></tr></thead>
+        <tbody id="catTb"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="addCatForm" style="display:none;" class="card">
+    <h2 id="catFormTitle">➕ Add Category</h2>
+    <div id="catMsg"></div>
+    <div class="grid2">
+      <div class="fg"><label>Category Name *</label><input id="catName" placeholder="e.g. Electronics"></div>
+      <div class="fg"><label>Parent Category (optional)</label><input id="catParent" placeholder="Leave blank for top-level"></div>
+      <div class="fg full"><label>Description</label><textarea id="catDesc" rows="2" placeholder="Short category description..."></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="saveCategory()">💾 Save Category</button>
+      <button class="btn btn-outline" onclick="document.getElementById('addCatForm').style.display='none'">Cancel</button>
+    </div>
+  </div>
+  `;
+  renderCatTable();
+}
+
+function renderCatTable() {
+  const rows = ALL_CATS.map(c => {
+    const prods = ALL_PRODS.filter(p => p.category === c.name);
+    const brands = [...new Set(prods.map(p=>p.brand).filter(Boolean))].slice(0,3);
+    const subCats = [...new Set(prods.map(p=>p.sub_category).filter(Boolean))].slice(0,3);
+    const avgPrice = prods.length ? Math.round(prods.reduce((s,p)=>s+parseFloat(p.price),0)/prods.length) : 0;
+    return `<tr>
+      <td><strong style="font-size:13px;">📁 ${c.name}</strong></td>
+      <td><span class="pill pill-blue">${prods.length} products</span></td>
+      <td>${subCats.length?subCats.map(s=>`<span class="pill pill-gray" style="margin:1px;">${s}</span>`).join(''):'<span style="color:#999;">—</span>'}</td>
+      <td>${brands.length?brands.map(b=>`<span class="pill pill-orange" style="margin:1px;">${b}</span>`).join(''):'—'}</td>
+      <td>${avgPrice?'₹'+avgPrice.toLocaleString('en-IN'):'—'}</td>
+      <td>
+        <button class="btn btn-view btn-sm" onclick="viewCategoryProducts('${c.name}')">👁 Products</button>
+        <button class="btn btn-edit btn-sm" onclick="editCategory('${c.name}')">✏️ Edit</button>
+        <button class="btn btn-del btn-sm" onclick="deleteCategory('${c.name}',${prods.length})">🗑</button>
+      </td>
+    </tr>`;
+  });
+  document.getElementById('catTb').innerHTML = rows.length ? rows.join('') : '<tr class="empty-row"><td colspan="6">No categories found. Add products first.</td></tr>';
+}
+
+function openAddCat() {
+  document.getElementById('addCatForm').style.display = 'block';
+  document.getElementById('catFormTitle').textContent = '➕ Add Category';
+  document.getElementById('catName').value = '';
+  document.getElementById('catParent').value = '';
+  document.getElementById('catDesc').value = '';
+  window.scrollTo({ top: document.getElementById('addCatForm').offsetTop - 80, behavior: 'smooth' });
+}
+function editCategory(name) {
+  document.getElementById('addCatForm').style.display = 'block';
+  document.getElementById('catFormTitle').textContent = '✏️ Edit Category: ' + name;
+  document.getElementById('catName').value = name;
+  window.scrollTo({ top: document.getElementById('addCatForm').offsetTop - 80, behavior: 'smooth' });
+}
+function saveCategory() {
+  const n = document.getElementById('catName').value.trim();
+  if (!n) { showMsg('catMsg','Category name is required!','error'); return; }
+  showMsg('catMsg','Category saved! Products in this category will be updated when you edit them.','success');
+  document.getElementById('addCatForm').style.display = 'none';
+}
+function deleteCategory(name, count) {
+  if (count > 0) {
+    confirmDelete(`Category "${name}" has ${count} products. Deleting will not remove products but they won't belong to any category.`, () => {
+      showMsg('catMsg','Category removed!','success');
+      renderCatTable();
+    });
+  } else {
+    confirmDelete(`Delete category "${name}"?`, () => { renderCatTable(); });
+  }
+}
+function viewCategoryProducts(cat) {
+  navTo('products', false);
+  setTimeout(() => {
+    const el = document.getElementById('catF');
+    if (el) { el.value = cat; filterTable(); }
+  }, 100);
+}
+
+// ════════════════════════════════════════════════════════
+// REVIEWS
+// ════════════════════════════════════════════════════════
+function renderReviews() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('mainContent').innerHTML = `
+  <div class="breadcrumb">Admin / <span>Reviews</span></div>
+  <div class="page-header">
+    <h1>⭐ Reviews <span style="font-size:14px;font-weight:400;color:#565959;" id="revCountLbl">(${ALL_REVS.length})</span></h1>
+  </div>
+
+  <!-- Add/Edit Review Form -->
+  <div class="card">
+    <h2 id="revFormTitle">➕ Add Review</h2>
+    <div id="revMsg"></div>
+    <div class="grid2">
+      <input type="hidden" id="revEditId">
+      <div class="fg">
+        <label>Product ID <span style="font-weight:400;color:#888;">(blank = show on ALL products)</span></label>
+        <input id="revProdId" type="number" placeholder="e.g. 1 — leave blank for global">
+        ${ALL_PRODS.length?`<div class="hint">Available: ${ALL_PRODS.slice(0,5).map(p=>`#${p.id} ${p.name.substring(0,20)}`).join(' | ')}</div>`:''}
+      </div>
+      <div class="fg">
+        <label>Reviewer Name *</label>
+        <input id="revName" placeholder="e.g. Rahul Sharma">
+      </div>
+      <div class="fg">
+        <label>Reviewer City</label>
+        <input id="revCity" placeholder="e.g. Jaipur, Rajasthan">
+      </div>
+      <div class="fg">
+        <label>Review Date</label>
+        <input id="revDate" type="date" value="${today}">
+      </div>
+      <div class="fg full">
+        <label>Rating *</label>
+        <div class="stars-inp" id="ratingStars">
+          <span class="star-r on" onclick="setRating(1)">★</span>
+          <span class="star-r on" onclick="setRating(2)">★</span>
+          <span class="star-r on" onclick="setRating(3)">★</span>
+          <span class="star-r on" onclick="setRating(4)">★</span>
+          <span class="star-r on" onclick="setRating(5)">★</span>
+        </div>
+        <input type="hidden" id="revRating" value="5">
+        <div class="hint" id="ratingText">5 stars — Excellent!</div>
+      </div>
+      <div class="fg">
+        <label>Review Title</label>
+        <input id="revTitle" placeholder="e.g. Excellent product, highly recommend!">
+      </div>
+      <div class="fg">
+        <label>Helpful Count</label>
+        <input id="revHelpful" type="number" value="0" min="0">
+        <div class="hint">How many people found this review helpful</div>
+      </div>
+      <div class="fg full">
+        <label>Review Body *</label>
+        <textarea id="revBody" rows="4" placeholder="Write the customer's review here..."></textarea>
+      </div>
+      <div class="fg">
+        <label>Verified Purchase</label>
+        <select id="revVerified">
+          <option value="true">✅ Yes — Verified Purchase</option>
+          <option value="false">No</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Status</label>
+        <select id="revActive">
+          <option value="true">✅ Active (Visible)</option>
+          <option value="false">⛔ Inactive (Hidden)</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="saveReview()">💾 Save Review</button>
+      <button class="btn btn-outline" onclick="resetReviewForm()">↺ Reset</button>
+    </div>
+  </div>
+
+  <!-- Reviews List -->
+  <div class="card" style="padding:0;">
+    <div style="padding:14px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <strong style="font-size:14px;">All Reviews</strong>
+      <input type="text" id="revSrch" placeholder="Search reviewer / title..." style="flex:1;min-width:200px;padding:7px 10px;border:1.5px solid #ddd;border-radius:4px;font-size:13px;" oninput="filterReviews()">
+      <select id="revProdF" style="padding:7px 10px;border:1.5px solid #ddd;border-radius:4px;font-size:13px;" onchange="filterReviews()">
+        <option value="">All Products</option>
+        <option value="global">Global (All Products)</option>
+        ${ALL_PRODS.slice(0,20).map(p=>`<option value="${p.id}">#${p.id} ${p.name.substring(0,25)}</option>`).join('')}
+      </select>
+      <select id="revRatingF" style="padding:7px 10px;border:1.5px solid #ddd;border-radius:4px;font-size:13px;" onchange="filterReviews()">
+        <option value="">All Ratings</option>
+        ${[5,4,3,2,1].map(n=>`<option value="${n}">${'★'.repeat(n)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Product</th><th>Reviewer</th><th>Rating</th><th>Title</th><th>Review (preview)</th><th>Date</th><th>Verified</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="reviewTb"></tbody>
+      </table>
+    </div>
+  </div>`;
+
+  filterReviews();
+}
+
+function filterReviews() {
+  const s = (document.getElementById('revSrch')?.value || '').toLowerCase();
+  const pf = document.getElementById('revProdF')?.value || '';
+  const rf = document.getElementById('revRatingF')?.value || '';
+  let revs = ALL_REVS;
+  if (s) revs = revs.filter(r => r.reviewer_name?.toLowerCase().includes(s) || r.title?.toLowerCase().includes(s));
+  if (pf === 'global') revs = revs.filter(r => !r.product_id);
+  else if (pf) revs = revs.filter(r => String(r.product_id) === pf);
+  if (rf) revs = revs.filter(r => String(r.rating) === rf);
+  document.getElementById('revCountLbl').textContent = `(${revs.length})`;
+  document.getElementById('reviewTb').innerHTML = revs.length ? revs.map(rv=>`<tr>
+    <td>#${rv.id}</td>
+    <td>${rv.product_id?`<span class="pill pill-blue">#${rv.product_id}</span>`:'<span class="pill pill-purple">Global</span>'}</td>
+    <td><strong>${rv.reviewer_name}</strong>${rv.reviewer_city?`<br><span style="font-size:10px;color:#565959;">📍${rv.reviewer_city}</span>`:''}</td>
+    <td><span style="color:#f0a500;">${'★'.repeat(rv.rating||5)}</span></td>
+    <td style="max-width:140px;font-size:11px;">${rv.title||'-'}</td>
+    <td style="max-width:180px;font-size:11px;color:#565959;">${(rv.body||'').substring(0,60)}${rv.body?.length>60?'...':''}</td>
+    <td style="white-space:nowrap;">${rv.review_date||'-'}</td>
+    <td>${rv.verified?'<span class="pill pill-green">✓ Verified</span>':'—'}</td>
+    <td>${rv.is_active?'<span class="pill pill-green">Active</span>':'<span class="pill pill-gray">Hidden</span>'}</td>
+    <td style="white-space:nowrap;">
+      <button class="btn btn-edit btn-sm" onclick="editRev(${rv.id})">✏️</button>
+      <button class="btn btn-del btn-sm" onclick="deleteRev(${rv.id},'${rv.reviewer_name}')">🗑</button>
+    </td>
+  </tr>`).join('') : '<tr class="empty-row"><td colspan="10">No reviews found</td></tr>';
+}
+
+const RATING_LABELS = {1:'⭐ Poor',2:'⭐⭐ Below Average',3:'⭐⭐⭐ Average',4:'⭐⭐⭐⭐ Good!',5:'⭐⭐⭐⭐⭐ Excellent!'};
+function setRating(n){
+  RATING_VAL=n;
+  const el = document.getElementById('revRating'); if(el) el.value=n;
+  document.querySelectorAll('.star-r').forEach((s,i)=>s.classList.toggle('on',i<n));
+  const rl = document.getElementById('ratingText'); if(rl) rl.textContent=RATING_LABELS[n]||'';
+}
+
+function editRev(id){
+  const rv=ALL_REVS.find(r=>r.id===id); if(!rv) return;
+  document.getElementById('revEditId').value=rv.id;
+  document.getElementById('revProdId').value=rv.product_id||'';
+  document.getElementById('revName').value=rv.reviewer_name||'';
+  document.getElementById('revCity').value=rv.reviewer_city||'';
+  document.getElementById('revDate').value=rv.review_date||'';
+  document.getElementById('revTitle').value=rv.title||'';
+  document.getElementById('revBody').value=rv.body||'';
+  document.getElementById('revHelpful').value=rv.helpful_count||0;
+  document.getElementById('revVerified').value=String(rv.verified);
+  document.getElementById('revActive').value=String(rv.is_active);
+  setRating(rv.rating||5);
+  document.getElementById('revFormTitle').textContent='✏️ Edit Review #'+id;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function saveReview(){
+  const eid=document.getElementById('revEditId').value;
+  const body={
+    product_id:document.getElementById('revProdId').value||null,
+    reviewer_name:document.getElementById('revName').value.trim(),
+    reviewer_city:document.getElementById('revCity').value.trim(),
+    review_date:document.getElementById('revDate').value,
+    rating:document.getElementById('revRating').value,
+    title:document.getElementById('revTitle').value.trim(),
+    body:document.getElementById('revBody').value.trim(),
+    helpful_count:document.getElementById('revHelpful').value||0,
+    verified:document.getElementById('revVerified').value,
+    is_active:document.getElementById('revActive').value,
+  };
+  if(!body.reviewer_name||!body.body){ showMsg('revMsg','❌ Reviewer name and review body are required!','error'); return; }
+  const url=eid?'/admin/api/reviews/'+eid:'/admin/api/reviews';
+  const d=await api(url,{method:eid?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(d.success){
+    showMsg('revMsg',eid?'✅ Review updated!':'✅ Review added!','success');
+    resetReviewForm();
+    const rd=await api('/admin/api/reviews'); ALL_REVS=rd.reviews||[];
+    document.getElementById('sb-rev-count').textContent=ALL_REVS.length;
+    filterReviews();
+  } else { showMsg('revMsg','❌ '+d.error,'error'); }
+}
+async function deleteRev(id,name){
+  confirmDelete(`Delete review by "${name}"?`, async()=>{
+    const d=await api('/admin/api/reviews/'+id,{method:'DELETE'});
+    if(d.success){ ALL_REVS=ALL_REVS.filter(r=>r.id!==id); document.getElementById('sb-rev-count').textContent=ALL_REVS.length; filterReviews(); }
+  });
+}
+function resetReviewForm(){
+  document.getElementById('revEditId').value='';
+  document.getElementById('revFormTitle').textContent='➕ Add Review';
+  ['revProdId','revName','revCity','revTitle','revBody'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('revHelpful').value=0;
+  document.getElementById('revDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('revVerified').value='true';
+  document.getElementById('revActive').value='true';
+  setRating(5);
+}
+
+// ════════════════════════════════════════════════════════
+// PAYMENT
+// ════════════════════════════════════════════════════════
+function renderPayment(){
+  document.getElementById('mainContent').innerHTML=`
+  <div class="breadcrumb">Admin / <span>Payment Settings</span></div>
+  <div class="page-header"><h1>💳 Payment Settings</h1></div>
+  <div id="payMsg"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="card">
+      <h2>📱 UPI Configuration</h2>
+      <div class="fg"><label>Primary UPI ID *</label><input id="c_upi_id" placeholder="yourstore@upi" value="${CFG.upi_id||''}"><div class="hint">Main UPI ID shown to customers</div></div>
+      <div class="fg"><label>UPI Display Name</label><input id="c_upi_name" placeholder="Your Store Name" value="${CFG.upi_name||''}"></div>
+      <div class="fg"><label>PhonePe UPI ID</label><input id="c_phonepe_upi" placeholder="yourstore@ybl" value="${CFG.phonepe_upi||''}"></div>
+      <div class="fg"><label>Google Pay UPI ID</label><input id="c_gpay_upi" placeholder="yourstore@okaxis" value="${CFG.gpay_upi||''}"></div>
+      <div class="fg"><label>Paytm UPI ID</label><input id="c_paytm_upi" placeholder="yourstore@paytm" value="${CFG.paytm_upi||''}"></div>
+      <div class="form-actions"><button class="btn btn-primary" onclick="saveCfg(['upi_id','upi_name','phonepe_upi','gpay_upi','paytm_upi'],'payMsg')">💾 Save UPI Settings</button></div>
+    </div>
+
+    <div class="card">
+      <h2>📷 Payment QR Code</h2>
+      <div class="qrprev" id="qrPrev">
+        ${CFG.qr_image?`<img src="${CFG.qr_image}">`:'<span style="font-size:11px;color:#999;text-align:center;">No QR Uploaded</span>'}
+      </div>
+      <div class="fg">
+        <label>Upload QR Image</label>
+        <input type="file" id="qrFile" accept="image/*" onchange="uploadQR(this)">
+        <div class="hint">Upload your UPI payment QR code. If not uploaded, QR auto-generates from Primary UPI ID.</div>
+      </div>
+      ${CFG.qr_image?`<button class="btn btn-del" style="margin-top:8px;" onclick="removeQR()">🗑️ Remove QR</button>`:''}
+      <div class="msg msg-info" style="margin-top:12px;">
+        ℹ️ Customers will scan this QR at checkout. Make sure it's the correct UPI payment QR.
+      </div>
+    </div>
+  </div>`;
+}
+
+async function uploadQR(inp){
+  if(!inp.files[0]) return;
+  const fd=new FormData(); fd.append('qr',inp.files[0]);
+  const d=await api('/admin/api/config/qr-upload',{method:'POST',body:fd});
+  if(d.success){ CFG.qr_image=d.url; document.getElementById('qrPrev').innerHTML=`<img src="${d.url}">`; showMsg('payMsg','✅ QR uploaded successfully!','success'); }
+  else showMsg('payMsg','❌ Upload failed: '+d.error,'error');
+}
+async function removeQR(){
+  await api('/admin/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({qr_image:''})});
+  CFG.qr_image=''; renderPayment(); showMsg('payMsg','QR removed','success');
+}
+
+// ════════════════════════════════════════════════════════
+// BANK
+// ════════════════════════════════════════════════════════
+function renderBank(){
+  document.getElementById('mainContent').innerHTML=`
+  <div class="breadcrumb">Admin / <span>Bank Details</span></div>
+  <div class="page-header"><h1>🏦 Bank Account Details</h1></div>
+  <div id="bankMsg"></div>
+  <div class="msg msg-warn">⚠️ These bank details are for internal records only — NOT shown to customers.</div>
+  <div class="card" style="margin-top:14px;">
+    <h2>🏦 Bank Information</h2>
+    <div class="grid2">
+      <div class="fg"><label>Bank Name</label><input id="c_bank_name" value="${CFG.bank_name||''}" placeholder="e.g. State Bank of India"></div>
+      <div class="fg"><label>Account Holder Name</label><input id="c_bank_holder" value="${CFG.bank_holder||''}" placeholder="e.g. ShopZone Pvt Ltd"></div>
+      <div class="fg"><label>Account Number</label><input id="c_bank_account_no" value="${CFG.bank_account_no||''}"></div>
+      <div class="fg"><label>IFSC Code</label><input id="c_bank_ifsc" value="${CFG.bank_ifsc||''}" placeholder="e.g. SBIN0001234"></div>
+      <div class="fg full"><label>Branch Name & Address</label><input id="c_bank_branch" value="${CFG.bank_branch||''}"></div>
+    </div>
+    <div class="form-actions"><button class="btn btn-primary" onclick="saveCfg(['bank_name','bank_holder','bank_account_no','bank_ifsc','bank_branch'],'bankMsg')">💾 Save Bank Details</button></div>
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// STORE SETTINGS
+// ════════════════════════════════════════════════════════
+function renderStore(){
+  document.getElementById('mainContent').innerHTML=`
+  <div class="breadcrumb">Admin / <span>Store Settings</span></div>
+  <div class="page-header"><h1>🏪 Store Settings</h1></div>
+  <div id="storeMsg"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="card">
+      <h2>🏪 Basic Store Info</h2>
+      <div class="fg"><label>Store Name</label><input id="c_store_name" value="${CFG.store_name||''}"></div>
+      <div class="fg"><label>Tagline</label><input id="c_store_tagline" value="${CFG.store_tagline||''}"></div>
+      <div class="fg"><label>Support Phone</label><input id="c_store_phone" value="${CFG.store_phone||''}" placeholder="1800-XXX-XXXX"></div>
+      <div class="fg"><label>Support Email</label><input id="c_store_email" type="email" value="${CFG.store_email||''}"></div>
+      <div class="fg"><label>Store Address</label><textarea id="c_store_address" rows="2">${CFG.store_address||''}</textarea></div>
+      <div class="form-actions"><button class="btn btn-primary" onclick="saveCfg(['store_name','store_tagline','store_phone','store_email','store_address'],'storeMsg')">💾 Save Store Info</button></div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>🚚 Pricing & Tax</h2>
+        <div class="fg"><label>Free Delivery Min Order (₹)</label><input id="c_free_delivery_min" type="number" value="${CFG.free_delivery_min||0}"><div class="hint">Set 0 for always free delivery</div></div>
+        <div class="fg"><label>GST %</label><input id="c_gst_percent" type="number" value="${CFG.gst_percent||18}"></div>
+        <div class="form-actions"><button class="btn btn-primary" onclick="saveCfg(['free_delivery_min','gst_percent'],'storeMsg')">💾 Save</button></div>
+      </div>
+
+      <div class="card">
+  <h2>🖼 Store Logo</h2>
+
+  <div class="fg">
+    <label>Current Logo</label>
+
+    <div style="margin-bottom:15px;">
+      <img
+        id="logoPreview"
+        src="${CFG.store_logo || '/images/no-logo.png'}"
+        style="width:140px;height:140px;object-fit:contain;border:1px solid #ddd;padding:8px;border-radius:8px;background:#fff;"
+      >
+    </div>
+
+    <input
+      type="file"
+      id="storeLogo"
+      accept="image/*"
+    >
+
+    <button
+      class="btn btn-primary"
+      style="margin-top:10px;"
+      onclick="uploadStoreLogo()"
+    >
+      Upload Logo
+    </button>
+  </div>
+</div>
+
+      <div class="card">
+        <h2>📱 OTP / SMS API</h2>
+        <div class="msg msg-info">ℹ️ Configure your SMS provider to send real OTPs to customers.</div>
+        <div class="fg" style="margin-top:12px;"><label>OTP API URL (POST endpoint)</label><input id="c_otp_api_url" value="${CFG.otp_api_url||''}" placeholder="https://api.yoursms.com/send-otp"></div>
+        <div class="fg"><label>OTP API Key / Token</label><input id="c_otp_api_key" type="password" value="${CFG.otp_api_key||''}" placeholder="Your secret API key"></div>
+        <div class="hint" style="margin-bottom:10px;">Compatible with Fast2SMS, MSG91, 2Factor, TextLocal, etc.</div>
+        <div class="form-actions"><button class="btn btn-primary" onclick="saveCfg(['otp_api_url','otp_api_key'],'storeMsg')">💾 Save API Settings</button></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// SHARED CONFIG SAVE
+// ════════════════════════════════════════════════════════
+async function saveCfg(keys, msgId) {
+  const payload = {};
+  keys.forEach(k => { const el = document.getElementById('c_'+k); if(el) payload[k] = el.value; });
+  const d = await api('/admin/api/config', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+  });
+  if (d.success) {
+    Object.assign(CFG, payload);
+    // Update store name in topbar
+    if (payload.store_name) {
+      document.getElementById('topStoreName').textContent = payload.store_name;
+      document.getElementById('sbStoreName').textContent = payload.store_name;
+    }
+    showMsg(msgId, '✅ Settings saved successfully!', 'success');
+  } else {
+    showMsg(msgId, '❌ Error: ' + d.error, 'error');
+  }
+}
+
+
+async function uploadStoreLogo(){
+
+    const file=document.getElementById("storeLogo").files[0];
+
+    if(!file){
+        alert("Select logo");
+        return;
+    }
+
+    const fd=new FormData();
+    fd.append("logo",file);
+
+    const res=await fetch("/admin/api/upload-logo", {
+        method:"POST",
+        body:fd
+    });
+
+    const data=await res.json();
+
+    if(data.success){
+
+        CFG.store_logo=data.logo;
+
+        document.getElementById("logoPreview").src=data.logo;
+
+        showMsg("storeMsg","✅ Logo uploaded","success");
+
+    }else{
+
+        showMsg("storeMsg",data.error,"error");
+
+    }
+
+}
+
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+(async () => {
+  await loadAll();
+  renderPage('dashboard');
+})();
+</script>
+</body>
+</html>

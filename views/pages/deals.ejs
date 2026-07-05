@@ -1,0 +1,79 @@
+<%- include('../partials/header') %>
+
+<div class="deals-hero">
+  <h1 id="dealsTitle">⚡ Today's Deals</h1>
+  <p id="dealsSub" style="color:#ccc;font-size:14px;margin-bottom:12px;">Grab the best offers before they expire!</p>
+  <div class="deals-countdown">
+    <div class="d-time-box"><span class="num" id="dh2">05</span><span class="lbl">HRS</span></div>
+    <span class="d-colon">:</span>
+    <div class="d-time-box"><span class="num" id="dm2">30</span><span class="lbl">MIN</span></div>
+    <span class="d-colon">:</span>
+    <div class="d-time-box"><span class="num" id="ds2">00</span><span class="lbl">SEC</span></div>
+  </div>
+</div>
+
+<div class="page-wrap">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+    <button class="deal-tab active" onclick="filterDeals(0,this)" style="padding:8px 18px;border:1.5px solid #f90;border-radius:20px;background:#f90;color:#131921;font-weight:700;font-size:13px;cursor:pointer;" id="tabAll">All</button>
+    <button class="deal-tab" onclick="filterDeals(50,this)" style="padding:8px 18px;border:1.5px solid #ddd;border-radius:20px;background:#fff;font-size:13px;cursor:pointer;" id="tab50">50%+ Off</button>
+    <button class="deal-tab" onclick="filterDeals(70,this)" style="padding:8px 18px;border:1.5px solid #ddd;border-radius:20px;background:#fff;font-size:13px;cursor:pointer;" id="tab70">70%+ Off</button>
+  </div>
+  <div class="prod-grid" id="dealsGrid"><div style="padding:30px;color:#565959;">Loading...</div></div>
+</div>
+
+<%- include('../partials/footer') %>
+
+<script>
+async function renderDeals(minSave) {
+  const isHi = getLang() === 'hi';
+  const params = { sort: 'discount', minDiscount: minSave || 1 };
+  const prods = await fetchProducts(params);
+  document.getElementById('dealsGrid').innerHTML = prods.length ? prods.map(raw=>{
+    const p = normalizeProduct(raw);
+    const img = p.image_url ? `<img src="${p.image_url}" alt="${p.name}" style="max-width:100%;max-height:100%;object-fit:contain;">` : (p.emoji||'📦');
+    return `<div class="prod-card">
+      <div class="prod-badge">-${p.save}%</div>
+      <a href="/product?id=${p.id}"><div class="prod-img-wrap">${img}</div></a>
+      <div class="prod-body">
+        <div class="prod-brand">${p.brand||''}</div>
+        <a href="/product?id=${p.id}"><div class="prod-name">${p.name}</div></a>
+        <div class="rating-row"><span class="stars">${'★'.repeat(Math.floor(p.rating||4))}</span><span class="rating-count">(${(p.reviews||0).toLocaleString()})</span></div>
+        <div class="price-row">
+          <span class="price">₹${p.price.toLocaleString('en-IN')}</span>
+          ${p.orig?`<span class="price-orig">₹${p.orig.toLocaleString('en-IN')}</span>`:''}
+          <span class="price-save">${isHi?'बचाएं':'Save'} ${p.save}%</span>
+        </div>
+        <div class="prime-badge"><span>prime</span><small>${isHi?'मुफ्त डिलीवरी':'FREE Delivery'}</small></div>
+        <button class="add-cart-btn" onclick="addToCart(${p.id},'${p.name.replace(/'/g,"\\'")}',${p.price})">${isHi?'कार्ट में जोड़ें':'Add to Cart'}</button>
+      </div>
+    </div>`;
+  }).join('') : `<p style="color:#565959;padding:20px;">${isHi?'कोई डील उपलब्ध नहीं':'No deals available'}</p>`;
+}
+
+function filterDeals(minSave, el) {
+  document.querySelectorAll('.deal-tab').forEach(b=>{ b.style.background='#fff'; b.style.borderColor='#ddd'; b.style.color='#131921'; });
+  el.style.background='#f90'; el.style.borderColor='#f90';
+  renderDeals(minSave);
+}
+
+function updateDealsLang() {
+  const isHi = getLang() === 'hi';
+  document.getElementById('dealsTitle').textContent = isHi ? '⚡ आज के ऑफर' : "⚡ Today's Deals";
+  document.getElementById('dealsSub').textContent = isHi ? 'समाप्त होने से पहले सर्वोत्तम ऑफर प्राप्त करें!' : 'Grab the best offers before they expire!';
+  document.getElementById('tabAll').textContent = isHi ? 'सभी' : 'All';
+  document.getElementById('tab50').textContent = isHi ? '50%+ छूट' : '50%+ Off';
+  document.getElementById('tab70').textContent = isHi ? '70%+ छूट' : '70%+ Off';
+}
+
+renderDeals(0);
+updateDealsLang();
+document.getElementById('langToggle').addEventListener('click', () => setTimeout(() => { renderDeals(0); updateDealsLang(); }, 50));
+
+let total = 5*3600+30*60;
+setInterval(()=>{ if(total<=0) return; total--;
+  const h=Math.floor(total/3600), m=Math.floor((total%3600)/60), s=total%60;
+  document.getElementById('dh2').textContent=String(h).padStart(2,'0');
+  document.getElementById('dm2').textContent=String(m).padStart(2,'0');
+  document.getElementById('ds2').textContent=String(s).padStart(2,'0');
+},1000);
+</script>

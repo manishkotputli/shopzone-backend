@@ -1,0 +1,90 @@
+<%- include('../partials/header') %>
+
+<div class="page-wrap">
+  <div class="success-wrap">
+    <!-- <div class="success-icon" style="background:#fdecea;color:#d32f2f;">❌</div> -->
+
+    <div class="success-box">
+      <h1 style="color:#c62828;">Payment Failed</h1>
+
+      <p style="color:#565959;font-size:14px;margin-bottom:15px;">
+        Unfortunately, we couldn't complete your payment. Your order has not been placed.
+      </p>
+
+      <div style="
+        background:#fff3cd;
+        border:1px solid #ffe082;
+        border-radius:8px;
+        padding:16px;
+        margin-bottom:18px;
+        text-align:left;
+      ">
+        <div style="font-size:15px;font-weight:700;color:#856404;margin-bottom:10px;">
+          ⚠ Important Information
+        </div>
+
+        <p style="margin:0 0 10px;font-size:13px;color:#444;line-height:1.7;">
+          If your payment amount has been deducted from your bank account,
+          <strong>please do not worry.</strong>
+        </p>
+
+        <p style="margin:0 0 10px;font-size:13px;color:#444;line-height:1.7;">
+          The deducted amount will be automatically credited back to your
+          original payment method within
+          <strong>15 business days</strong>, depending on your bank.
+        </p>
+
+        <p style="margin:0;font-size:13px;color:#444;line-height:1.7;">
+          We appreciate your patience. If you do not receive the refund after
+          15 business days, please contact our customer support with your
+          payment details.
+        </p>
+      </div>
+
+      <div style="
+        background:#f8f9fa;
+        border-radius:8px;
+        padding:14px;
+        margin-bottom:20px;
+        text-align:left;
+      ">
+        <div style="font-size:14px;font-weight:700;margin-bottom:8px;">
+          Possible Reasons
+        </div>
+
+        <ul style="margin:0;padding-left:18px;font-size:13px;color:#555;line-height:1.8;">
+          <li>Payment was cancelled.</li>
+          <li>Insufficient bank balance.</li>
+          <li>Network or server timeout.</li>
+          <li>Bank declined the transaction.</li>
+          <li>UPI/Card verification failed.</li>
+        </ul>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <a href="/checkout"
+           style="padding:10px 22px;background:#ff9900;color:#111;border-radius:6px;font-size:13px;font-weight:700;">
+          Retry Payment
+        </a>
+
+        <a href="/"
+           style="padding:10px 22px;background:#131921;color:#fff;border-radius:6px;font-size:13px;font-weight:600;">
+          Continue Shopping
+        </a>
+      </div>
+
+      <p style="margin-top:18px;font-size:12px;color:#777;">
+        Reference ID:
+        <strong id="refId"></strong>
+      </p>
+
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
+
+<script>
+document.getElementById("refId").textContent =
+  "PAY-" + Math.floor(100000000 + Math.random() * 900000000);
+</script>
