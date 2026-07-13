@@ -2,6 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const { Product, SiteConfig, ProductVariant, Review } = require('../models');
 const { Op } = require('sequelize');
+const { encryptId, decryptId } = require("../helpers/cryptoHelper");
 
 // Products list
 router.get('/products', async (req, res) => {
@@ -35,7 +36,19 @@ router.get('/products', async (req, res) => {
     if (sort === 'discount')  order = [['discount_percent','DESC']];
 
     const products = await Product.findAll({ where, order });
-    res.json({ success: true, products });
+
+const data = products.map(p => {
+    const obj = p.toJSON();
+
+    obj.encrypted_id = encryptId(obj.id);
+
+    return obj;
+});
+
+res.json({
+    success: true,
+    products: data
+});
   } catch (err) {
     res.status(500).json({ success: false, error: err.message, products: [] });
   }
@@ -53,13 +66,35 @@ router.get('/products', async (req, res) => {
 // Single product — with variants + reviews
 router.get('/products/:id', async (req, res) => {
   try {
-    const product = await Product.findOne({
-      where: { id: req.params.id, is_active: true },
-      include: [
-        { model: ProductVariant, as: 'variants', where: { is_active: true }, required: false, order: [['sort_order','ASC']] },
-        { model: Review,         as: 'reviews',  where: { is_active: true }, required: false, order: [['review_date','DESC']] }
-      ]
+   const id = decryptId(req.params.id);
+
+if (!id) {
+    return res.status(400).json({
+        success:false,
+        error:"Invalid Product"
     });
+}
+
+const product = await Product.findOne({
+    where:{
+        id,
+        is_active:true
+    },
+    include:[
+        {
+            model:ProductVariant,
+            as:"variants",
+            where:{is_active:true},
+            required:false
+        },
+        {
+            model:Review,
+            as:"reviews",
+            where:{is_active:true},
+            required:false
+        }
+    ]
+});
     if (!product) return res.status(404).json({ success: false, error: 'Product not found' });
     res.json({ success: true, product });
   } catch (err) {

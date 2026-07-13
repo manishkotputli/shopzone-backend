@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const app = express();
 const { SiteConfig } = require('./models');
-
+const { decryptId, encryptId } = require("./helpers/cryptoHelper");
 app.use(async (req, res, next) => {
     try {
         const rows = await SiteConfig.findAll();
@@ -44,27 +44,29 @@ app.use('/admin', adminRoutes);
 // app.get('/',             (req, res) => res.render('pages/index'));
 // app.get('/category',     (req, res) => res.render('pages/category', { cat: req.query.cat || 'Electronics' }));
 // app.get('/product',      (req, res) => res.render('pages/product'));
-app.get('/', (req, res) => {
-    res.redirect('/product?id=1');
-});
 
+app.get('/', (req, res) => {
+   res.redirect(`/product?id=${encodeURIComponent(encryptId(1))}`);
+});
 app.get('/category', (req, res) => {
-    res.redirect('/product?id=1');
+    res.redirect(`/product?id=${encodeURIComponent(encryptId(1))}`);
 });
 app.get('/product', async (req, res) => {
 
-    const id = parseInt(req.query.id);
+    const id = decryptId(req.query.id);
 
-    if (!id || isNaN(id))
-        return res.redirect('/product?id=1');
+    if (!id) {
+        return res.status(404).send("Invalid Product");
+    }
 
     const product = await Product.findByPk(id);
 
-    if (!product)
-        return res.redirect('/product?id=1');
+    if (!product) {
+        return res.status(404).send("Product Not Found");
+    }
 
-    res.render('pages/product', {
-        productId: id
+    res.render("pages/product", {
+        productId: req.query.id   // encrypted id pass karo
     });
 
 });

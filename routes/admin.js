@@ -4,6 +4,9 @@ const { Product, SiteConfig, ProductVariant, Review } = require('../models');
 const { requireAdmin } = require('../middleware/auth');
 const { uploadProductImage, uploadQrImage, uploadLogo } = require('../middleware/upload');
 const { Op } = require('sequelize');
+const { encryptId, decryptId } = require("../helpers/cryptoHelper");
+
+
 
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'shopzone123';
@@ -15,7 +18,9 @@ router.post('/login', (req, res) => {
     res.setHeader('Set-Cookie', 'sz_admin=authenticated; Path=/; HttpOnly; Max-Age=86400');
     return res.redirect('/admin/panel');
   }
-  res.render('admin/login', { error: 'Invalid credentials. Default: admin / shopzone123' });
+ res.render('admin/login', {
+  error: 'Invalid username or password. Please try again.'
+});
 });
 router.get('/logout', (req, res) => {
   res.setHeader('Set-Cookie', 'sz_admin=; Path=/; Max-Age=0');
@@ -24,6 +29,16 @@ router.get('/logout', (req, res) => {
 router.get('/',      (req, res) => res.redirect('/admin/panel'));
 router.get('/panel', requireAdmin, (req, res) => res.render('admin/panel'));
 
+
+
+
+router.post('/api/upload-image', requireAdmin, uploadProductImage.single('image'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success:false, error:'No file' });
+    const url = `/uploads/products/${req.file.filename}`;
+    res.json({ success:true, url });
+  } catch(err) { res.status(500).json({ success:false, error:err.message }); }
+});
 // ════════════════ PRODUCTS ════════════════
 router.get('/api/products', requireAdmin, async (req, res) => {
   try {
@@ -33,7 +48,7 @@ router.get('/api/products', requireAdmin, async (req, res) => {
     if (category) where.category = category;
     if (brand)    where.brand    = brand;
     const products = await Product.findAll({ where, order:[['id','DESC']] });
-    res.json({ success:true, products });
+    res.json({ success:true, products: products.map(withEncryptedId) });
   } catch(err) { res.status(500).json({ success:false, error:err.message }); }
 });
 
@@ -46,50 +61,89 @@ router.get('/api/products/:id', requireAdmin, async (req, res) => {
       ]
     });
     if (!p) return res.status(404).json({ success:false, error:'Not found' });
-    res.json({ success:true, product:p });
+    res.json({ success:true,product: withEncryptedId(p) });
   } catch(err) { res.status(500).json({ success:false, error:err.message }); }
 });
 
 function coerce(body) {
-  ['highlights','specifications','in_box'].forEach(f => {
-    if (typeof body[f]==='string') { try { body[f]=JSON.parse(body[f]); } catch { body[f] = f==='specifications'?{}:[]; } }
+
+  ['highlights', 'specifications', 'in_box'].forEach(f => {
+    if (typeof body[f] === 'string') {
+      try {
+        body[f] = JSON.parse(body[f]);
+      } catch {
+        body[f] = f === 'specifications' ? {} : [];
+      }
+    }
   });
-  ['price','original_price'].forEach(f => { body[f] = body[f]!==''&&body[f]!==undefined ? parseFloat(body[f]) : null; });
-  ['discount_percent','review_count','stock_quantity','warranty_months','weight_grams'].forEach(f => { if(body[f]!==undefined&&body[f]!=='') body[f]=parseInt(body[f]); });
-  if (body.rating!==undefined&&body.rating!=='') body.rating = parseFloat(body.rating);
-  if (body.is_featured!==undefined) body.is_featured = body.is_featured==='true'||body.is_featured===true;
-  if (body.is_active!==undefined)   body.is_active   = body.is_active!=='false';
+
+  ['price', 'original_price'].forEach(f => {
+    if (body[f] !== undefined && body[f] !== '') {
+      body[f] = parseFloat(body[f]);
+    } else {
+      delete body[f];
+    }
+  });
+
+  ['discount_percent','review_count','stock_quantity','warranty_months','weight_grams'].forEach(f => {
+    if (body[f] !== undefined && body[f] !== '') {
+      body[f] = parseInt(body[f]);
+    } else {
+      delete body[f];
+    }
+  });
+
+  if (body.rating !== undefined && body.rating !== '') {
+    body.rating = parseFloat(body.rating);
+  } else {
+    delete body.rating;
+  }
+
+  if (body.is_featured !== undefined) {
+    body.is_featured = body.is_featured === 'true' || body.is_featured === true;
+  }
+
+  if (body.is_active !== undefined) {
+    body.is_active = body.is_active === 'true' || body.is_active === true;
+  }
+
   return body;
 }
 
-router.post('/api/products', requireAdmin, uploadProductImage.array('images',20), async (req, res) => {
+function withEncryptedId(p) {
+  const obj = p.toJSON();          // plain object banao pehle
+  obj.encrypted_id = encryptId(p.id);
+  return obj;
+}
+
+router.post('/api/products', requireAdmin, uploadProductImage.single('image'), async (req, res) => {
   try {
     const body = coerce({...req.body});
-    if (req.files && req.files.length) {
-    body.images = req.files.map(file =>
-        `/uploads/products/${file.filename}`
-    );
-
-    body.image_url = body.images[0];
+    if (req.file) {
+    body.image_url = `/uploads/products/${req.file.filename}`;
 }
     const p = await Product.create(body);
     res.json({ success:true, product:p });
   } catch(err) { res.status(500).json({ success:false, error:err.message }); }
 });
 
-router.put('/api/products/:id', requireAdmin, uploadProductImage.array('images',20), async (req, res) => {
+router.put('/api/products/:id', requireAdmin, uploadProductImage.single('image'), async (req, res) => {
+ //console.log("=== PUT ROUTE HIT ===");
+
   try {
     const p = await Product.findByPk(req.params.id);
     if (!p) return res.status(404).json({ success:false, error:'Not found' });
     const body = coerce({...req.body});
-   if (req.files && req.files.length) {
-    body.images = req.files.map(file =>
-        `/uploads/products/${file.filename}`
-    );
-
-    body.image_url = body.images[0];
+  if (req.file) {
+    body.image_url = `/uploads/products/${req.file.filename}`;
 }
-    await p.update(body);
+  
+
+//console.log("Before:", p.toJSON());
+
+await p.update(body);
+
+// console.log("After:", p.toJSON());
     res.json({ success:true, product:p });
   } catch(err) { res.status(500).json({ success:false, error:err.message }); }
 });

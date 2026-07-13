@@ -105,6 +105,12 @@
     color:#28a745;
     font-weight:600;
 }
+.processing-steps div.fail{
+    opacity:1;
+    transform:translateX(0);
+    color:#c62828;      /* red */
+    font-weight:600;
+}
 </style>
 <div id="paymentProcessing" style="display:none;">
   <div class="payment-processing-box">
@@ -121,7 +127,7 @@
       <div id="s1">✓ Payment request received</div>
       <div id="s2">⏳ Checking payment status...</div>
       <div id="s3">Waiting for bank confirmation...</div>
-      <div id="s4">Finalizing your order...</div>
+      <div id="s4" class=" fail">Finalizing your order...</div>
     </div>
 
     <div style="margin-top:18px;font-size:13px;">
@@ -137,6 +143,7 @@
 <%- include('../partials/footer') %>
 
 <script>
+  const STEP_KEY = "checkoutStep";
 let STEP = 1; // 1=Address 2=Payment 3=Confirm
 let ADDRESS_DATA = {};
 let SITE_CFG = {};
@@ -239,6 +246,8 @@ function renderAddress(){
       ${isHi?'इस पते का इस्तेमाल करें':'Use this address'}
     </button>
   </div>
+
+
   `;
 }
 
@@ -249,7 +258,7 @@ async function goToPayment(){
   const addr1=document.getElementById('coAddr1').value.trim();
   const pin=document.getElementById('coPincode').value.trim();
 
-  if(!name||!mobile||!addr1||!pin){
+  if(!name||!mobile||!pin){
     alert(isHi?'कृपया सभी आवश्यक फ़ील्ड भरें':'Please fill all required fields'); return;
   }
   if(mobile.length!==10){ alert(isHi?'सही मोबाइल नंबर दर्ज करें':'Enter valid mobile number'); return; }
@@ -264,8 +273,11 @@ async function goToPayment(){
     state: document.getElementById('coState').value,
     country: 'India'
   };
+   localStorage.setItem('checkoutAddress', JSON.stringify(ADDRESS_DATA));
   SITE_CFG = await fetchSiteConfig();
-  STEP=2; renderSteps(2); renderPayment();
+  STEP=2; 
+  localStorage.setItem(STEP_KEY, "2");
+  renderSteps(2); renderPayment();
 }
 
 async function fetchPin(v){
@@ -286,41 +298,26 @@ function buildUpiLink({upiId, storeName, total, orderId}){
   return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(storeName)}&am=${encodeURIComponent(total)}&cu=INR&tn=Order-${encodeURIComponent(orderId)}`;
 }
 /* ══════════════ STEP 2 — PAYMENT ══════════════ */
+let SELECTED_SUB_APP = ''; // ट्रैक करने के लिए कि Google Pay, Paytm आदि में से कौन सा चुना गया है
+
 function renderPayment(){
   const isHi=getLang()==='hi';
   const cfg=SITE_CFG;
 
   // Build QR src — uploaded image OR auto-generate from UPI ID
-let qrSrc = "";
+  let qrSrc = "";
+  const upiId = cfg.upi_id;
+  const storeName = cfg.upi_name || "ShopZone";
+  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  const total = cart.reduce((sum, item) => sum + (Number(item.price) * Number(item.qty)), 0);
+  const orderId = "ORD-" + Date.now();
 
-const upiId = cfg.upi_id;
-const storeName = cfg.upi_name || "ShopZone";
-
-const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-
-const total = cart.reduce((sum, item) => {
-    return sum + (Number(item.price) * Number(item.qty));
-}, 0);
-
-const orderId = "ORD-" + Date.now();
-
-if (upiId) {
-
-    const upiLink = buildUpiLink({
-        upiId,
-        storeName,
-        total,
-        orderId
-    });
-
+  if (upiId) {
+    const upiLink = buildUpiLink({ upiId, storeName, total, orderId });
     qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiLink)}`;
-
-} else if (cfg.qr_image) {
-
-    // sirf jab UPI ID na ho
+  } else if (cfg.qr_image) {
     qrSrc = cfg.qr_image;
-
-}
+  }
 
   const delivDate=new Date(); delivDate.setDate(delivDate.getDate()+7);
   const delivStr=delivDate.toLocaleDateString(isHi?'hi-IN':'en-IN',{weekday:'long',day:'numeric',month:'long'});
@@ -328,7 +325,6 @@ if (upiId) {
   document.getElementById('stepContent').innerHTML=`
   <div class="checkout-layout">
     <div>
-      <!-- Delivery address recap -->
       <div class="checkout-box" style="background:#f0f8f0;border:1.5px solid #c3e6cb;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <strong style="font-size:14px;">✓ ${ADDRESS_DATA.name} ${isHi?'को डिलीवर किया जा रहा है':'will be delivered to'}</strong>
@@ -337,60 +333,96 @@ if (upiId) {
         <div style="font-size:13px;color:#333;">${ADDRESS_DATA.addr1}${ADDRESS_DATA.addr2?', '+ADDRESS_DATA.addr2:''}, ${ADDRESS_DATA.city}, ${ADDRESS_DATA.state}, ${ADDRESS_DATA.pincode}</div>
       </div>
 
-      <!-- Payment options -->
       <div class="checkout-box">
         <h3>${isHi?'भुगतान विधि चुनें':'Select Payment Method'}</h3>
         <div style="font-size:13px;color:var(--green);margin-bottom:12px;">✓ ${isHi?`ऑफर के साथ ₹23 तक की बचत करें`:'Save upto ₹23 with offers'}</div>
 
-        <!-- UPI section -->
         <div style="margin-bottom:8px;font-size:12px;font-weight:700;color:var(--muted);">UPI</div>
         <div class="pay-option-box">
-          <!-- Scan QR -->
           <div class="pay-opt-row ${PAYMENT_METHOD==='qr'?'selected':''}" onclick="selectPayMethod('qr',this)">
             <input type="radio" class="pay-opt-radio" name="pay" ${PAYMENT_METHOD==='qr'?'checked':''}>
             <span class="pay-opt-label">${isHi?'Scan QR Code':'Scan QR Code'}</span>
-            <span class="pay-opt-icon">📷</span>
+            <span class="pay-opt-icon"><img src="images/payment/qricon.png" style='height: 21px' ></span>
           </div>
-          ${PAYMENT_METHOD==='qr'?`
-          <div class="upi-sub">
-            ${qrSrc?`<div class="qr-box"><img src="${qrSrc}" alt="UPI QR"><div style="font-size:11px;color:var(--muted);">${cfg.upi_id||''}</div></div>`:'<div style="padding:20px;color:var(--muted);font-size:13px;">No QR configured. Please enter UPI ID below.</div>'}
-          </div>`:''}
+          ${QR_LOADING?`
+            <div class="upi-sub">
+                <div style="padding:30px;text-align:center;">
+                    <div class="loader"></div>
+                    <div style="margin-top:15px;">Preparing Secure QR...</div>
+                </div>
+            </div>
+          `:PAYMENT_METHOD==="qr"?`
+            <div class="upi-sub">
+                ${qrSrc ? `<div class="qr-box"><img src="${qrSrc}"><div style="font-size:11px;">${cfg.upi_id||""}</div></div>` : ""}
+            </div>
+          `:''}
 
-          <!-- PhonePe -->
           <div class="pay-opt-row ${PAYMENT_METHOD==='phonepe'?'selected':''}" onclick="selectPayMethod('phonepe',this)">
             <input type="radio" class="pay-opt-radio" name="pay" ${PAYMENT_METHOD==='phonepe'?'checked':''}>
             <span class="pay-opt-label">PhonePe</span>
-            <span class="pay-opt-icon">🟣</span>
+            <span class="pay-opt-icon"><img src="images/payment/phonepe.png" style='height: 21px' ></span>
           </div>
           ${PAYMENT_METHOD==='phonepe'?`
-          <div class="upi-sub">
-            <div style="font-size:13px;margin-bottom:8px;">${isHi?'PhonePe UPI ID पर भुगतान करें:':'Pay to PhonePe UPI ID:'} <strong>${cfg.phonepe_upi||cfg.upi_id||''}</strong></div>
-            <div style="font-size:12px;color:var(--muted);">${isHi?'PhonePe ऐप खोलें → Scan & Pay → ऊपर दिया गया UPI ID दर्ज करें':'Open PhonePe app → Pay/Transfer → Enter UPI ID above'}</div>
+          <div class="upi-sub" style="text-align:center; padding: 10px 0;">
+            <button class="checkout-btn" style="width:100%; max-width:300px; background:#5f259f; color:#fff;" onclick="launchSpecificUpi('PhonePe')">
+              ${isHi ? '🟣 PhonePe से भुगतान करें' : '🟣 Pay with PhonePe'}
+            </button>
           </div>`:''}
 
-          <!-- Any UPI App -->
           <div class="pay-opt-row ${PAYMENT_METHOD==='upi'?'selected':''}" onclick="selectPayMethod('upi',this)">
             <input type="radio" class="pay-opt-radio" name="pay" ${PAYMENT_METHOD==='upi'?'checked':''}>
             <div>
               <div class="pay-opt-label">${isHi?'किसी भी UPI ऐप से भुगतान करें':'Pay via any UPI App'}</div>
               <div style="font-size:11px;color:var(--muted);">Google Pay, PhonePe, Paytm ${isHi?'और बहुत कुछ':'and more'}</div>
             </div>
-            <span style="font-size:10px;font-weight:700;background:#4a90e2;color:#fff;padding:2px 6px;border-radius:3px;">UPI</span>
+            <span class="pay-opt-icon"><img src="images/payment/upa.png" style="height: 15px"></span>
           </div>
           ${PAYMENT_METHOD==='upi'?`
-          <div class="upi-sub">
-            <div class="form-group" style="margin-bottom:8px;">
-              <label style="font-size:12px;">${isHi?'UPI ID दर्ज करें:':'Enter your UPI ID:'}</label>
-              <input type="text" id="upiIdInput" placeholder="yourname@upi" style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:4px;font-size:13px;">
-            </div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">${isHi?'या किसी ऐप से भुगतान करें:':'Or pay using:'} <strong>${cfg.upi_id||''}</strong></div>
-            <div class="upi-apps-row">
-              ${[['Google Pay','🟢'],['PhonePe','🟣'],['Paytm','💙'],['BHIM','🇮🇳']].map(([a,ic])=>`<button class="upi-app-btn" onclick="handleUpiAppPay('${a}')">${ic} ${a}</button>`).join('')}
-            </div>
-          </div>`:''}
+<div class="upi-sub" style="padding: 10px 5px;">
+  <div style="font-size:12px; font-weight:600; color:var(--muted); margin-bottom:12px; text-align:left;">
+    ${isHi ? 'कोई एक ऐप चुनें:' : 'Select an app:'}
+  </div>
+  
+  <div class="upi-apps-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
+    ${[
+      ['PhonePe', 'images/payment/phonepe.png'],
+      ['Google Pay', 'images/payment/gpay.png'],
+      ['Paytm', 'images/payment/paytm.png'],
+      ['BHIM', 'images/payment/bhim.png'],
+      ['FamPay', 'images/payment/fam.png']
+    ].map(([a, imgPath]) => `
+      <label class="upi-list-item ${SELECTED_SUB_APP===a?'active-app':''}" 
+             style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid ${SELECTED_SUB_APP===a?'#ff9900':'#e0e0e0'}; background: ${SELECTED_SUB_APP===a?'#fff9f0':'#ffffff'}; border-radius: 6px; cursor: pointer; transition: all 0.2s;"
+             onclick="selectSubApp('${a}')">
+        
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <input type="radio" name="sub_upi_app" ${SELECTED_SUB_APP===a?'checked':''} style="accent-color: #ff9900; margin: 0; cursor: pointer;">
+          
+          <span style="font-size: 14px; font-weight: 500; color: #333;">${a}</span>
+        </div>
+        
+        <span class="upi-app-icon" style="display: flex; align-items: center;">
+          <img src="${imgPath}" style="height: 21px; object-fit: contain;" onerror="this.style.display='none';">
+        </span>
+        
+      </label>
+    `).join('')}
+  </div>
+
+  ${SELECTED_SUB_APP ? `
+    <button class="checkout-btn" style="width:100%; max-width:300px; margin: 10px auto 5px auto; display: block;" 
+            onclick="launchSpecificUpi('${SELECTED_SUB_APP}')">
+      ${isHi ? `यह ऐप से भुगतान करें` : `Pay with ${SELECTED_SUB_APP}`}
+    </button>
+  ` : `
+    <div style="font-size:12px; color:#999; font-style:italic; text-align:center; margin-top:5px;">
+      ${isHi ? 'आगे बढ़ने के लिए कृपया ऊपर से एक ऐप चुनें' : 'Please select an app above to proceed'}
+    </div>
+  `}
+</div>
+`:''}
         </div>
 
-        <!-- Credit/Debit Cards (unavailable) -->
         <div style="margin:10px 0 6px;font-size:12px;font-weight:700;color:var(--muted);">CREDIT & DEBIT CARDS</div>
         <div class="pay-option-box">
           <div class="pay-opt-row pay-opt-unavail" onclick="showUnavail()">
@@ -399,7 +431,6 @@ if (upiId) {
           </div>
         </div>
 
-        <!-- More ways -->
         <div style="margin:10px 0 6px;font-size:12px;font-weight:700;color:var(--muted);">MORE WAYS TO PAY</div>
         <div class="pay-option-box">
           ${[
@@ -415,12 +446,10 @@ if (upiId) {
           </div>`).join('')}
         </div>
 
-        <!-- Pay status -->
         <div id="payStatus" class="pay-status"></div>
       </div>
     </div>
 
-    <!-- Order summary -->
     <div>${renderOrderSummaryHTML(isHi,delivStr)}</div>
   </div>
 
@@ -432,11 +461,58 @@ if (upiId) {
   `;
 }
 
-let PAYMENT_METHOD='qr'; // default
-
-function selectPayMethod(method, el){
-  PAYMENT_METHOD=method;
+// यह नया फ़ंक्शन सब-ऐप्स (Google Pay, Paytm आदि) को चुनने में मदद करेगा बिना तुरंत पेमेंट ट्रिगर किए
+function selectSubApp(appName) {
+  SELECTED_SUB_APP = appName;
   renderPayment();
+}
+
+// पुराने selectPayMethod को भी रिसेट करने के लिए अपडेट करें ताकि टैब बदलने पर पुराना चयन मिट जाए
+function selectPayMethod(method){
+    SELECTED_SUB_APP = ''; // Reset app selection inside tabs
+    if(method==="qr"){
+        QR_LOADING=true;
+        PAYMENT_METHOD="";
+        renderPayment();
+        setTimeout(()=>{
+            QR_LOADING=false;
+            PAYMENT_METHOD="qr";
+            renderPayment();
+        },3000);
+        return;
+    }
+    PAYMENT_METHOD=method;
+    renderPayment();
+}
+
+let PAYMENT_METHOD=''; // default
+let QR_LOADING = false;
+// सबसे नीचे के मुख्य "Continue / आगे बढ़ें" बटन के क्लिक लॉजिक को भी सिंक किया
+function proceedPay(){
+  const isHi = getLang() === 'hi';
+  if (!PAYMENT_METHOD) {
+     showToast(isHi ? "कृपया भुगतान विधि चुनें" : "Please select payment method");
+     return;
+  }
+  
+  if (PAYMENT_METHOD === 'phonepe') {
+     launchSpecificUpi('PhonePe');
+     return;
+  }
+  
+  if (PAYMENT_METHOD === 'upi') {
+     if (!SELECTED_SUB_APP) {
+       showToast(isHi ? "कृपया सूची से एक ऐप चुनें" : "Please select an app from the list");
+       return;
+     }
+     if (SELECTED_SUB_APP === 'Generic') {
+       initiateGenericUpiPayment();
+     } else {
+       launchSpecificUpi(SELECTED_SUB_APP);
+     }
+     return;
+  }
+  simulatePayment(PAYMENT_METHOD);
 }
 
 function showUnavail(){
@@ -444,15 +520,92 @@ function showUnavail(){
   showToast(isHi?'⚠️ यह भुगतान विधि अनुपलब्ध है':'⚠️ This payment method is unavailable');
 }
 
-function handleUpiAppPay(app){
-  simulatePayment(app);
+/* Generic UPI Payment */
+function initiateGenericUpiPayment() {
+  launchSpecificUpi("Any UPI App");
 }
 
+/* ══════════════ FIXED REDIRECTION & PAY LOGIC ══════════════ */
+
+
+/* Forcefully Launch Specific App via Correct Android Intent Formats */
+function launchSpecificUpi(appName) {
+  const isHi = getLang() === 'hi';
+  const cfg = SITE_CFG;
+
+  if (!cfg.upi_id) {
+    return showToast(isHi ? "UPI ID सेट नहीं है" : "UPI ID not configured");
+  }
+
+  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  const total = cart.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
+  const orderId = "ORD-" + Date.now();
+
+  // Standard UPI deep-link query parameters
+  const queryParams = `pa=${encodeURIComponent(cfg.upi_id)}&pn=${encodeURIComponent(cfg.upi_name || "ShopZone")}&am=${total}&cu=INR&tn=${encodeURIComponent(orderId)}`;
+  const genericLink = `upi://pay?${queryParams}`;
+
+  // Packages dictionary mapping for Android Intent Scheme
+  const packages = {
+    "Google Pay": "com.google.android.apps.nbu.paisa.user",
+    "PhonePe": "com.phonepe.app",
+    "Paytm": "net.one97.paytm",
+    "BHIM": "in.org.npci.upiapp"
+  };
+
+  const pkg = packages[appName];
+  let launchUrl = genericLink;
+
+  // Formatting deep intent explicitly to trigger Android system choices cleanly
+  if (pkg) {
+    launchUrl = `intent://pay?${queryParams}#Intent;scheme=upi;package=${pkg};S.browser_fallback_url=${encodeURIComponent(genericLink)};end`;
+  }
+
+  showToast(isHi ? `${appName} खोल रहे हैं...` : `Opening ${appName}...`);
+
+  // Start the UI simulation overlay processing 
+  simulatePayment(appName);
+
+  // Attempt forceful redirection
+  setTimeout(() => {
+    window.location.href = launchUrl;
+
+    // Double Fallback Validation Layer
+    setTimeout(() => {
+      // If the page is still active on our system process panel, fallback to open universal app chooser
+      if (document.getElementById("paymentProcessing").style.display === "flex") {
+        window.location.href = genericLink;
+        
+        // Final ultimate failure route: direct to Finance app space
+        setTimeout(() => {
+          if (document.getElementById("paymentProcessing").style.display === "flex") {
+            showToast(isHi ? "UPI ऐप नहीं मिला। Play Store खोल रहे हैं..." : "No UPI app found. Opening Play Store...");
+            window.open("https://play.google.com/store/apps/category/FINANCE", "_blank");
+          }
+        }, 2000);
+      }
+    }, 1500);
+  }, 350);
+}
+/* QR Modal */
+function showQRModal() {
+  const isHi = getLang()==='hi';
+  alert(isHi ? "QR Code Modal (aap alag se bana sakte hain)" : "QR Code coming soon");
+  // Better: Implement a nice modal here if needed
+}
 function proceedPay(){
   const isHi=getLang()==='hi';
+  if(!PAYMENT_METHOD){
+     showToast(isHi ? "कृपया भुगतान विधि चुनें" : "Please select payment method");
+     return;
+  }
+  if(PAYMENT_METHOD==='phonepe'){
+     launchSpecificUpi('PhonePe');
+     return;
+  }
   if(PAYMENT_METHOD==='upi'){
-    const id=document.getElementById('upiIdInput')?.value.trim();
-    if(!id){ showToast(isHi?'कृपया UPI ID दर्ज करें':'Please enter your UPI ID'); return; }
+     initiateGenericUpiPayment();
+     return;
   }
   simulatePayment(PAYMENT_METHOD);
 }
@@ -464,7 +617,7 @@ function simulatePayment(method) {
     // Show popup
     document.getElementById("paymentProcessing").style.display = "flex";
 
-    let timeLeft = 50;
+    let timeLeft = 20;
 
     const countdown = document.getElementById("countdown");
     const progressFill = document.getElementById("progressFill");
@@ -479,6 +632,7 @@ function simulatePayment(method) {
     s2.innerHTML = "⏳ Checking payment status...";
     s3.innerHTML = "Waiting for bank confirmation...";
     s4.innerHTML = "Finalizing your order...";
+    s4.classList.remove('fail');
 
     countdown.textContent = timeLeft;
     progressFill.style.width = "0%";
@@ -507,25 +661,25 @@ function simulatePayment(method) {
         countdown.textContent = timeLeft;
 
         // Progress Bar
-        const percent = ((50 - timeLeft) / 50) * 100;
+        const percent = ((20 - timeLeft) / 20) * 100;
         progressFill.style.width = percent + "%";
 
         // Step 2
-        if (timeLeft === 40) {
+        if (timeLeft === 16) {
             s2.innerHTML = "✓ Checking payment status";
             s3.innerHTML = "⏳ Waiting for bank confirmation...";
             activateStep(1);
         }
 
         // Step 3
-        if (timeLeft === 20) {
+        if (timeLeft === 8) {
             s3.innerHTML = "✓ Bank confirmed payment";
             s4.innerHTML = "⏳ Finalizing your order...";
             activateStep(2);
         }
 
         // Step 4
-        if (timeLeft === 5) {
+        if (timeLeft === 2) {
             activateStep(3);
         }
 
@@ -538,9 +692,13 @@ function simulatePayment(method) {
 
             s4.innerHTML = "✓ Order finalized";
             activateStep(4);
-
+            s4.classList.remove('fail');
+           //x s4.classList.add('done');
             localStorage.removeItem("cart");
+
             updateCartCount();
+            localStorage.removeItem(STEP_KEY);
+            localStorage.removeItem("checkoutAddress");
 
             setTimeout(() => {
                 window.location.href = "/order-success";
@@ -575,14 +733,53 @@ function renderOrderSummaryHTML(isHi, delivStr){
 }
 
 /* ══════════════ INIT ══════════════ */
-(async()=>{
-  if(!isLoggedIn()){
-    showAuthPopup(()=>{ renderSteps(1); renderAddress(); });
-  }
-  renderSteps(1);
-  renderAddress();
-  SITE_CFG=await fetchSiteConfig();
+(async () => {
+
+    SITE_CFG = await fetchSiteConfig();
+
+    const savedAddr = localStorage.getItem("checkoutAddress");
+    const savedStep = Number(localStorage.getItem(STEP_KEY) || 1);
+
+    if (!isLoggedIn()) {
+        showAuthPopup(() => initCheckout());
+    }
+
+    initCheckout();
+
+    function initCheckout() {
+
+        if (savedStep === 2 && savedAddr) {
+
+            ADDRESS_DATA = JSON.parse(savedAddr);
+
+            STEP = 2;
+
+            renderSteps(2);
+            renderPayment();
+            return;
+        }
+
+        if (savedStep === 3 && savedAddr) {
+
+            ADDRESS_DATA = JSON.parse(savedAddr);
+
+            STEP = 3;
+
+            renderSteps(3);
+
+            // agar renderConfirm() hai to
+            renderConfirm();
+
+            return;
+        }
+
+        STEP = 1;
+        renderSteps(1);
+        renderAddress();
+    }
+
 })();
+
 
 document.getElementById('langToggle').addEventListener('click',()=>setTimeout(()=>{
   renderSteps(STEP);

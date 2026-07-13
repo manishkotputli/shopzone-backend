@@ -129,6 +129,20 @@ input,select,textarea,button{font-family:inherit;}
 .divider{border:none;border-top:1px solid var(--border);margin:12px 0;}
 .feat-list{padding-left:18px;}
 .feat-list li{font-size:13px;color:var(--text);margin-bottom:5px;line-height:1.5;}
+
+/* Top Highlights grid (product page) */
+.th-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;}
+.th-label{font-size:12px;color:var(--muted);margin-bottom:2px;}
+.th-value{font-size:13px;color:var(--text);font-weight:600;}
+
+/* Related / "Shayad aap bhi ise pasand karein" carousel */
+.related-section{background:#fff;border-radius:4px;padding:16px;margin-bottom:14px;}
+.related-title{font-size:15px;font-weight:700;margin-bottom:14px;}
+.related-scroll{display:flex;gap:14px;overflow-x:auto;padding-bottom:6px;}
+.related-scroll::-webkit-scrollbar{height:6px;}
+.related-scroll::-webkit-scrollbar-thumb{background:#ddd;border-radius:4px;}
+.related-scroll .prod-card{flex:0 0 150px;}
+@media (max-width:768px){ .related-scroll .prod-card{flex:0 0 130px;} .th-grid{grid-template-columns:1fr 1fr;gap:10px 14px;} }
 /* Variants */
 .variant-section{margin-bottom:14px;}
 .variant-label{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text);}

@@ -3,8 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 <title>ShopZone Admin Panel</title>
 <style>
+  
+/* TD Container for all buttons */
+td.action-buttons {
+    display: flex;
+        margin-top: 63px;
+    align-items: center;
+    gap: 8px; /* Buttons ke beech ka gap */
+}
+
+/* Toggle Switch Base */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 30px;
+    height: 20px;
+    cursor: pointer;
+    margin: 0; /* Extra margin hatane ke liye */
+}
+
+.toggle-switch input {
+    display: none;
+}
+
+/* The Slider Track */
+.toggle-switch .slider {
+    position: absolute;
+    inset: 0;
+    background: #6b7280;
+    border-radius: 50px;
+    transition: .3s ease;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,.2);
+}
+
+/* The Slider Knob (Ball) */
+.toggle-switch .slider::before {
+    content: "";
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    left: 4px;
+    top: 4px;
+    background: #fff;
+    border-radius: 50%;
+    transition: .3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,.2);
+}
+
+/* Checked State - Background change */
+.toggle-switch input:checked + .slider {
+    background: #22c55e;
+}
+
+/* Checked State - Knob Movement Fixed for 30px width */
+.toggle-switch input:checked + .slider::before {
+    transform: translateX(10px); /* 24px se badal kar 10px kar diya hai */
+}
 /* ═══ RESET & BASE ═══ */
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Segoe UI',Arial,sans-serif;background:#eaeded;color:#0f1111;font-size:14px;display:flex;flex-direction:column;min-height:100vh;}
@@ -242,9 +299,9 @@ tbody tr:last-child td{border-bottom:none;}
     <button class="sidebar-link" onclick="navTo('payment')" id="nav-payment">
       <span class="icon">💳</span> Payment
     </button>
-    <button class="sidebar-link" onclick="navTo('bank')" id="nav-bank">
+    <!-- <button class="sidebar-link" onclick="navTo('bank')" id="nav-bank">
       <span class="icon">🏦</span> Bank Details
-    </button>
+    </button> -->
     <button class="sidebar-link" onclick="navTo('store')" id="nav-store">
       <span class="icon">🏪</span> Store Settings
     </button>
@@ -288,8 +345,23 @@ tbody tr:last-child td{border-bottom:none;}
 </div>
 
 <script>
+function copyProductUrl(encryptedId, btn) {
+    const url = `${window.location.origin}/product?id=${encryptedId}`;
 
+    navigator.clipboard.writeText(url).then(() => {
+        const text = btn.querySelector(".btn-text");
 
+        text.textContent = "Copied ✓";
+        btn.disabled = true;
+
+        setTimeout(() => {
+            text.textContent = "Copy URL";
+            btn.disabled = false;
+        }, 2000);
+    }).catch(() => {
+        alert("Failed to copy URL");
+    });
+}
 'use strict';
 // ════════════════════════════════════════════════════════
 // STATE
@@ -535,6 +607,7 @@ function renderProducts() {
             <th>Rating</th>
             <th>Badge</th>
             <th>Status</th>
+            <th>url copy</th>
             <th style="min-width:120px;">Actions</th>
           </tr>
         </thead>
@@ -551,6 +624,7 @@ function filterTable() {
   const cf = document.getElementById('catF')?.value || '';
   const sf = document.getElementById('statusF')?.value || '';
   let ps = ALL_PRODS;
+  
   if (s) ps = ps.filter(p => p.name.toLowerCase().includes(s) || (p.brand||'').toLowerCase().includes(s) || (p.sku||'').toLowerCase().includes(s));
   if (cf) ps = ps.filter(p => p.category === cf);
   if (sf === 'active')   ps = ps.filter(p => p.is_active && p.stock_quantity > 0);
@@ -566,6 +640,7 @@ function filterTable() {
     const img = p.image_url
       ? `<img src="${p.image_url}" style="width:46px;height:46px;object-fit:contain;border-radius:4px;background:#f7f7f7;">`
       : `<span style="font-size:28px;">${p.emoji||'📦'}</span>`;
+      
     return `<tr>
       <td>${img}</td>
       <td style="max-width:200px;">
@@ -585,19 +660,50 @@ function filterTable() {
       <td><span style="color:#f0a500;">${'★'.repeat(Math.round(p.rating||4))}</span> ${p.rating||4}</td>
       <td>${p.badge?`<span class="pill ${badgeClass(p.badge)}">${p.badge}</span>`:'-'}</td>
       <td>
-        <span class="pill ${p.is_active?'pill-green':'pill-gray'}">
-          <span class="dot ${p.is_active?'dot-green':'dot-gray'}"></span>
-          ${p.is_active?'Active':'Inactive'}
-        </span>
+         <label class="toggle-switch" 
+               onclick="toggleActive(${p.id}, ${!p.is_active})" 
+               title="${p.is_active ? 'Deactivate' : 'Activate'}">
+            <input type="checkbox" ${p.is_active ? 'checked' : ''}>
+            <span class="slider"></span>
+        </label>
       </td>
-      <td>
-        <button class="btn btn-view btn-sm" onclick="viewProduct(${p.id})" title="View">👁</button>
-        <button class="btn btn-edit btn-sm" onclick="editProduct(${p.id})" title="Edit">✏️</button>
-        <button class="btn btn-toggle btn-sm ${p.is_active?'':'on'}" onclick="toggleActive(${p.id},${!p.is_active})" title="${p.is_active?'Deactivate':'Activate'}">${p.is_active?'🔴':'🟢'}</button>
-        <button class="btn btn-del btn-sm" onclick="deleteProduct(${p.id},'${p.name.replace(/'/g,"\\'")}')">🗑</button>
-      </td>
+      
+     <td style="vertical-align: middle; text-align: center;">
+  <button class="btn-copy-url" 
+          data-product-id="${p.encrypted_id}" 
+          onclick="copyProductUrl('${p.encrypted_id}', this)"
+          style="display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #4f46e5, #3b82f6); color: #ffffff; border: none; padding: 6px 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.25); transition: all 0.2s ease; white-space: nowrap;">
+    <i class="ti ti-copy" style="margin-right: 4px; font-size: 13px;"></i>
+    <span class="btn-text">Copy</span>
+  </button>
+</td>
+
+<td style="vertical-align: middle;">
+  <div style="display: flex; align-items: center; gap: 6px;">  
+  <button class="btn btn-view btn-sm" 
+          onclick="viewProduct(${p.id})" 
+          title="View"
+          style="display: inline-flex; align-items: center; justify-content: center; background-color: #6366f1; color: #ffffff; border: none; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s ease;">
+      <i class="ti ti-eye" style="font-size: 14px;"></i>
+  </button>
+  
+  <button class="btn btn-edit btn-sm" 
+          onclick="editProduct(${p.id})" 
+          title="Edit"
+          style="display: inline-flex; align-items: center; justify-content: center; background-color: #06b6d4; color: #ffffff; border: none; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s ease;">
+      <i class="ti ti-pencil" style="font-size: 14px;"></i>
+  </button>
+
+  <button class="btn btn-del btn-sm" 
+          onclick="deleteProduct(${p.id},'${p.name.replace(/'/g,"\\'")}')" 
+          title="Delete"
+          style="display: inline-flex; align-items: center; justify-content: center; background-color: #ef4444; color: #ffffff; border: none; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s ease;">
+      <i class="ti ti-trash" style="font-size: 14px;"></i>
+  </button>
+</div>
+</td>
     </tr>`;
-  }).join('') : '<tr class="empty-row"><td colspan="12">No products found</td></tr>';
+  }).join('') : '<tr class="empty-row"><td colspan="13">No products found</td></tr>';
 }
 
 async function viewProduct(id) {
@@ -637,16 +743,24 @@ async function editProduct(id) {
 }
 
 async function toggleActive(id, newState) {
-  const d = await api('/admin/api/products/' + id, {
-    method: 'PUT',
-    body: (() => { const fd = new FormData(); fd.append('is_active', newState); return fd; })()
-  });
-  if (d.success) {
-    const idx = ALL_PRODS.findIndex(p => p.id === id);
-    if (idx > -1) ALL_PRODS[idx].is_active = newState;
-    filterTable();
-  }
+    console.log("ID:", id);
+    console.log("newState:", newState, typeof newState);
+
+    const fd = new FormData();
+    fd.append("is_active", newState);
+
+    for (const [k, v] of fd.entries()) {
+        console.log(k, v);
+    }
+
+    const d = await api('/admin/api/products/' + id, {
+        method: 'PUT',
+        body: fd
+    });
+
+    console.log(d);
 }
+
 
 function deleteProduct(id, name) {
   confirmDelete(`Delete product "${name.substring(0,40)}"?`, async () => {
@@ -657,6 +771,21 @@ function deleteProduct(id, name) {
       filterTable();
     } else alert('Error: ' + d.error);
   });
+}
+
+
+async function uploadVariantImg(input) {
+  if (!input.files[0]) return;
+  const fd = new FormData();
+  fd.append('image', input.files[0]);
+  const d = await api('/admin/api/upload-image', { method: 'POST', body: fd }); // apna upload endpoint use karo
+  if (d.success) {
+    const td = input.closest('td');
+    td.querySelector('.var-img-url').value = d.url;
+    const prev = td.querySelector('.var-img-prev');
+    prev.src = d.url;
+    prev.style.display = 'block';
+  }
 }
 
 // ════════════════════════════════════════════════════════
@@ -670,6 +799,21 @@ function renderAddProduct(product) {
   EDIT_PRODUCT = product;
   const isEdit = !!product;
   const p = product || {};
+
+    console.log("p.images =", p.images);
+    console.log("typeof =", typeof p.images);
+    console.log("isArray =", Array.isArray(p.images));
+    let images = [];
+
+if (typeof p.images === "string") {
+    try {
+        images = JSON.parse(p.images);
+    } catch (e) {
+        images = [];
+    }
+} else if (Array.isArray(p.images)) {
+    images = p.images;
+}
 
   document.getElementById('mainContent').innerHTML = `
   <div class="breadcrumb">Admin / <a onclick="navTo('products')" style="cursor:pointer;color:#007185;">Products</a> / <span>${isEdit?'Edit Product':'Add Product'}</span></div>
@@ -764,14 +908,16 @@ function renderAddProduct(product) {
       <div class="card">
         <h2>📝 Product Details</h2>
         <div class="fg">
-          <label>Highlights / Key Features</label>
+          <label>"About this item" Bullet Points</label>
+          <p style="font-size:11px;color:#565959;margin:-6px 0 8px;">Shows as the bulleted "About this item" list on the product page.</p>
           <div id="hlList">${(p.highlights||[]).map(h=>`<div class="dli"><input type="text" value="${esc(h)}"><button class="rm-btn" onclick="this.parentElement.remove()">✕</button></div>`).join('')}</div>
-          <button class="add-row-btn" onclick="addDRow('hlList','e.g. 6.8 inch AMOLED 120Hz display')">+ Add Feature</button>
+          <button class="add-row-btn" onclick="addDRow('hlList','e.g. 100% soft breathable cotton fabric')">+ Add Feature</button>
         </div>
         <hr class="section-divider">
         <div class="fg">
-          <label>Specifications (Key : Value)</label>
-          <div id="specList">${Object.entries(p.specifications||{}).map(([k,v])=>`<div class="dli"><input type="text" placeholder="Key" value="${esc(k)}" style="max-width:160px;"><input type="text" placeholder="Value" value="${esc(v)}"><button class="rm-btn" onclick="this.parentElement.remove()">✕</button></div>`).join('')}</div>
+          <label>Top Highlights / Specifications (Key : Value)</label>
+          <p style="font-size:11px;color:#565959;margin:-6px 0 8px;">Shows as the "Top Highlights" grid on the product page (e.g. Material → Linen, Fit Type → Regular Fit) and in the full specification table below it.</p>
+          <div id="specList">${Object.entries(p.specifications||{}).map(([k,v])=>`<div class="dli"><input type="text" placeholder="Key e.g. Fit Type" value="${esc(k)}" style="max-width:160px;"><input type="text" placeholder="Value e.g. Regular Fit" value="${esc(v)}"><button class="rm-btn" onclick="this.parentElement.remove()">✕</button></div>`).join('')}</div>
           <button class="add-row-btn" onclick="addSpecRow()">+ Add Spec</button>
         </div>
         <hr class="section-divider">
@@ -788,7 +934,7 @@ function renderAddProduct(product) {
         <p style="font-size:12px;color:#565959;margin-bottom:12px;">Add variants if this product has different sizes, colors, or storage options.</p>
         <div class="variants-wrap">
           <table style="min-width:580px;">
-            <thead><tr><th>Type</th><th>Value</th><th>Price Modifier (₹)</th><th>Stock</th><th>Sort Order</th><th></th></tr></thead>
+            <thead><tr><th>Type</th><th>Value</th><th>Price Modifier (₹)</th><th>Stock</th><th>Sort Order</th><th>Image</th><th></th></tr></thead>
             <tbody id="variantTb">
               ${(p.variants||[]).map((v,i)=>`<tr>
                 <td><input type="text" list="varTypeDL" value="${esc(v.variant_type)}" style="width:110px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
@@ -796,6 +942,11 @@ function renderAddProduct(product) {
                 <td><input type="number" value="${v.price_modifier||0}" style="width:80px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
                 <td><input type="number" value="${v.stock||0}" style="width:70px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
                 <td><input type="number" value="${i}" style="width:50px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
+                <td>
+  <input type="file" accept="image/*" class="var-img-inp" onchange="uploadVariantImg(this)">
+  <input type="hidden" class="var-img-url" value="${v.image_url||''}">
+  <img class="var-img-prev" src="${v.image_url||''}" style="width:36px;height:36px;object-fit:contain;display:${v.image_url?'block':'none'};margin-top:4px;">
+</td>
                 <td><button class="rm-btn" onclick="this.closest('tr').remove()">✕</button></td>
               </tr>`).join('')}
             </tbody>
@@ -848,11 +999,15 @@ function renderAddProduct(product) {
         <h2>🖼️ Product Image</h2>
         <div class="fg">
           <label>Upload Image</label>
-          <input type="file" id="pImg" accept="image/*" multiple onchange="prevImg(this,'imgP')">
-         <div id="imgP" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">
+          <input type="file" id="pImg" accept="image/*" onchange="prevImg(this,'imgP')">
+<div id="imgP" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">
+  ${p.image_url
+    ? `<div class="imgprev imgprev-lg"><img src="${p.image_url}"></div>`
+    : `<div class="imgprev imgprev-lg"><span>Click to upload</span></div>`}
+</div>
     ${
-        p.images && p.images.length
-        ? p.images.map(img => `
+        images.length
+    ? images.map(img =>  `
             <div class="imgprev imgprev-lg">
                 <img src="${img}">
             </div>
@@ -903,7 +1058,7 @@ function addSpecRow(k = '', v = '') {
   d.innerHTML = `<input type="text" placeholder="Key e.g. RAM" value="${k.replace(/"/g,'&quot;')}" style="max-width:160px;"><input type="text" placeholder="Value e.g. 8GB" value="${v.replace(/"/g,'&quot;')}"><button type="button" class="rm-btn" onclick="this.parentElement.remove()">✕</button>`;
   document.getElementById('specList').appendChild(d);
 }
-function addVariantRow(type='',value='',pm=0,stock=0) {
+function addVariantRow(type='',value='',pm=0,stock=0,imageUrl='') {
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td><input type="text" list="varTypeDL" placeholder="Size/Color" value="${type}" style="width:110px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
@@ -911,9 +1066,15 @@ function addVariantRow(type='',value='',pm=0,stock=0) {
     <td><input type="number" value="${pm}" style="width:80px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
     <td><input type="number" value="${stock}" style="width:70px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
     <td><input type="number" value="0" style="width:50px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
+    <td>
+      <input type="file" accept="image/*" class="var-img-inp" onchange="uploadVariantImg(this)">
+      <input type="hidden" class="var-img-url" value="${imageUrl}">
+      <img class="var-img-prev" src="${imageUrl}" style="width:36px;height:36px;object-fit:contain;display:${imageUrl?'block':'none'};margin-top:4px;">
+    </td>
     <td><button class="rm-btn" onclick="this.closest('tr').remove()">✕</button></td>`;
   document.getElementById('variantTb').appendChild(tr);
 }
+
 function getDList(id) { return [...document.querySelectorAll(`#${id} input`)].map(i=>i.value.trim()).filter(Boolean); }
 function getSpecs() {
   const rows = document.querySelectorAll('#specList .dli'), o = {};
@@ -922,47 +1083,31 @@ function getSpecs() {
 }
 function getVariants() {
   return [...document.querySelectorAll('#variantTb tr')].map((tr,i) => {
-    const ins = tr.querySelectorAll('input');
-    return { variant_type: ins[0].value.trim(), variant_value: ins[1].value.trim(), price_modifier: parseFloat(ins[2].value)||0, stock: parseInt(ins[3].value)||0, sort_order: i };
+    const ins = tr.querySelectorAll('input[type=text],input[type=number]');
+    const imgUrl = tr.querySelector('.var-img-url')?.value || '';
+    return {
+      variant_type: ins[0].value.trim(),
+      variant_value: ins[1].value.trim(),
+      price_modifier: parseFloat(ins[2].value)||0,
+      stock: parseInt(ins[3].value)||0,
+      image_url: imgUrl,
+      sort_order: i
+    };
   }).filter(v => v.variant_type && v.variant_value);
 }
+
 function prevImg(input, previewId) {
-
-    const preview = document.getElementById(previewId);
-
-    preview.innerHTML = "";
-
-    if (!input.files.length) {
-        preview.innerHTML = `
-            <div class="imgprev imgprev-lg">
-                <span>Click to upload</span>
-            </div>
-        `;
-        return;
-    }
-
-    [...input.files].forEach(file => {
-
-        const reader = new FileReader();
-
-        reader.onload = function(e){
-
-            const div = document.createElement("div");
-
-            div.className = "imgprev imgprev-lg";
-
-            div.innerHTML = `
-                <img src="${e.target.result}">
-            `;
-
-            preview.appendChild(div);
-
-        };
-
-        reader.readAsDataURL(file);
-
-    });
-
+  const preview = document.getElementById(previewId);
+  preview.innerHTML = "";
+  if (!input.files.length) {
+    preview.innerHTML = `<div class="imgprev imgprev-lg"><span>Click to upload</span></div>`;
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    preview.innerHTML = `<div class="imgprev imgprev-lg"><img src="${e.target.result}"></div>`;
+  };
+  reader.readAsDataURL(input.files[0]);
 }
 
 async function saveProduct() {
@@ -992,11 +1137,8 @@ async function saveProduct() {
   // const f = document.getElementById('pImg');
   // if (f && f.files[0]) fd.append('image', f.files);
 
-  const files = document.getElementById("pImg").files;
-
-for (const file of files) {
-    fd.append("images", file);
-}
+const imgFile = document.getElementById("pImg").files[0];
+if (imgFile) fd.append("image", imgFile);
   const btn = document.querySelector('[onclick="saveProduct()"]');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
 
@@ -1037,7 +1179,6 @@ function renderCategories() {
   <div class="breadcrumb">Admin / <span>Categories</span></div>
   <div class="page-header">
     <h1>🗂️ Categories</h1>
-    <button class="btn btn-primary" onclick="openAddCat()">➕ Add Category</button>
   </div>
 
   <div class="card" style="padding:0;">
@@ -1254,7 +1395,7 @@ function filterReviews() {
     <td>${rv.is_active?'<span class="pill pill-green">Active</span>':'<span class="pill pill-gray">Hidden</span>'}</td>
     <td style="white-space:nowrap;">
       <button class="btn btn-edit btn-sm" onclick="editRev(${rv.id})">✏️</button>
-      <button class="btn btn-del btn-sm" onclick="deleteRev(${rv.id},'${rv.reviewer_name}')">🗑</button>
+      <button class="btn btn-del btn-sm" onclick="deleteRev(${rv.id},'${(rv.reviewer_name||'').replace(/'/g,"\\'")}')">🗑</button>
     </td>
   </tr>`).join('') : '<tr class="empty-row"><td colspan="10">No reviews found</td></tr>';
 }
@@ -1329,41 +1470,41 @@ function resetReviewForm(){
 // ════════════════════════════════════════════════════════
 // PAYMENT
 // ════════════════════════════════════════════════════════
-function renderPayment(){
-  document.getElementById('mainContent').innerHTML=`
-  <div class="breadcrumb">Admin / <span>Payment Settings</span></div>
-  <div class="page-header"><h1>💳 Payment Settings</h1></div>
-  <div id="payMsg"></div>
+function renderPayment() {
+  document.getElementById('mainContent').innerHTML = `
+    <div class="breadcrumb">Admin / <span>Payment Settings</span></div>
+    <div class="page-header">
+      <h1>💳 Payment Settings</h1>
+    </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div id="payMsg"></div>
+
     <div class="card">
       <h2>📱 UPI Configuration</h2>
-      <div class="fg"><label>Primary UPI ID *</label><input id="c_upi_id" placeholder="yourstore@upi" value="${CFG.upi_id||''}"><div class="hint">Main UPI ID shown to customers</div></div>
-      <div class="fg"><label>UPI Display Name</label><input id="c_upi_name" placeholder="Your Store Name" value="${CFG.upi_name||''}"></div>
-      <div class="fg"><label>PhonePe UPI ID</label><input id="c_phonepe_upi" placeholder="yourstore@ybl" value="${CFG.phonepe_upi||''}"></div>
-      <div class="fg"><label>Google Pay UPI ID</label><input id="c_gpay_upi" placeholder="yourstore@okaxis" value="${CFG.gpay_upi||''}"></div>
-      <div class="fg"><label>Paytm UPI ID</label><input id="c_paytm_upi" placeholder="yourstore@paytm" value="${CFG.paytm_upi||''}"></div>
-      <div class="form-actions"><button class="btn btn-primary" onclick="saveCfg(['upi_id','upi_name','phonepe_upi','gpay_upi','paytm_upi'],'payMsg')">💾 Save UPI Settings</button></div>
-    </div>
 
-    <div class="card">
-      <h2>📷 Payment QR Code</h2>
-      <div class="qrprev" id="qrPrev">
-        ${CFG.qr_image?`<img src="${CFG.qr_image}">`:'<span style="font-size:11px;color:#999;text-align:center;">No QR Uploaded</span>'}
-      </div>
       <div class="fg">
-        <label>Upload QR Image</label>
-        <input type="file" id="qrFile" accept="image/*" onchange="uploadQR(this)">
-        <div class="hint">Upload your UPI payment QR code. If not uploaded, QR auto-generates from Primary UPI ID.</div>
+        <label>Primary UPI ID *</label>
+        <input
+          id="c_upi_id"
+          placeholder="yourstore@upi"
+          value="${CFG.upi_id || ''}"
+        >
+        <div class="hint">
+          Enter your main UPI ID for receiving payments.
+        </div>
       </div>
-      ${CFG.qr_image?`<button class="btn btn-del" style="margin-top:8px;" onclick="removeQR()">🗑️ Remove QR</button>`:''}
-      <div class="msg msg-info" style="margin-top:12px;">
-        ℹ️ Customers will scan this QR at checkout. Make sure it's the correct UPI payment QR.
+
+      <div class="form-actions">
+        <button
+          class="btn btn-primary"
+          onclick="saveCfg(['upi_id'],'payMsg')"
+        >
+          💾 Save UPI Settings
+        </button>
       </div>
     </div>
-  </div>`;
+  `;
 }
-
 async function uploadQR(inp){
   if(!inp.files[0]) return;
   const fd=new FormData(); fd.append('qr',inp.files[0]);
@@ -1436,7 +1577,7 @@ function renderStore(){
       <img
         id="logoPreview"
         src="${CFG.store_logo || '/images/no-logo.png'}"
-        style="width:140px;height:140px;object-fit:contain;border:1px solid #ddd;padding:8px;border-radius:8px;background:#fff;"
+        style="width:140px;height:140px;object-fit:contain;border:1px solid #ddd;padding:8px;border-radius:8px;background:#000000;"
       >
     </div>
 
