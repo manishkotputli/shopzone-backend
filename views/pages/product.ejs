@@ -1,6 +1,15 @@
 <%- include('../partials/header') %>
 <style>
 
+.in-stock-txt{
+    color:#28a745;   /* Green */
+    font-weight:600;
+}
+
+.out-of-stock-txt{
+    color:#dc3545;   /* Red */
+    font-weight:600;
+}
   .fulfilled-badge{
     display:inline-flex;
     align-items:center;
@@ -631,8 +640,21 @@ function renderProduct(isHi){
         <div><a href="#" class="link-text">${isHi?'विवरण देखें':'Details'}</a></div>
       </div>
 
-      <div class="${p.stock_quantity>0?'in-stock-txt':'out-of-stock-txt'}">
-${p.stock_quantity > 0 ? (isHi ? `स्टॉक में है (${p.stock_quantity} Pcs)` : `In Stock (${p.stock_quantity} Pcs)`) : (isHi ? 'स्टॉक में नहीं है' : 'Out of Stock')}      </div>
+      <div class="${
+    p.stock_quantity <= 3
+        ? 'out-of-stock-txt'
+        : 'in-stock-txt'
+}">
+    ${
+        p.stock_quantity > 0
+            ? (isHi
+                ? `स्टॉक में है (${p.stock_quantity} Pcs)`
+                : `In Stock (${p.stock_quantity} Pcs)`)
+            : (isHi
+                ? 'स्टॉक में नहीं है'
+                : 'Out of Stock')
+    }
+</div>
 
       <div class="qty-container">
         <select id="qty" onchange="updatePrice()">

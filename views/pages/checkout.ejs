@@ -143,6 +143,49 @@
 <%- include('../partials/footer') %>
 
 <script>
+
+  let qrInterval;
+
+function startQrTimer(){
+
+    clearInterval(qrInterval);
+
+    let sec=180;
+
+    const timer=document.getElementById("qrTimer");
+    const img=document.getElementById("upiQR");
+    const btn=document.getElementById("regenQR");
+
+    if(!timer || !img) return;
+
+    img.style.filter="blur(0px)";
+    btn.style.display="none";
+
+    qrInterval=setInterval(()=>{
+
+        sec--;
+
+        const m=Math.floor(sec/60);
+        const s=sec%60;
+
+        timer.innerHTML=
+        String(m).padStart(2,'0')+
+        ":"+
+        String(s).padStart(2,'0');
+
+        if(sec<=0){
+
+            clearInterval(qrInterval);
+
+            img.style.filter="blur(8px)";
+            timer.innerHTML="QR Expired";
+
+            btn.style.display="inline-block";
+        }
+
+    },1000);
+
+}
   const STEP_KEY = "checkoutStep";
 let STEP = 1; // 1=Address 2=Payment 3=Confirm
 let ADDRESS_DATA = {};
@@ -238,7 +281,7 @@ function renderAddress(){
       </div>
     </div>
     <!-- Order summary sidebar -->
-    <div>${renderOrderSummaryHTML(isHi)}</div>
+   
   </div>
 
   <div style="padding-bottom:16px;">
@@ -258,7 +301,7 @@ async function goToPayment(){
   const addr1=document.getElementById('coAddr1').value.trim();
   const pin=document.getElementById('coPincode').value.trim();
 
-  if(!name||!mobile||!pin){
+  if(!name){
     alert(isHi?'कृपया सभी आवश्यक फ़ील्ड भरें':'Please fill all required fields'); return;
   }
   if(mobile.length!==10){ alert(isHi?'सही मोबाइल नंबर दर्ज करें':'Enter valid mobile number'); return; }
@@ -300,6 +343,14 @@ function buildUpiLink({upiId, storeName, total, orderId}){
 /* ══════════════ STEP 2 — PAYMENT ══════════════ */
 let SELECTED_SUB_APP = ''; // ट्रैक करने के लिए कि Google Pay, Paytm आदि में से कौन सा चुना गया है
 
+function generateNewQR(){
+
+    const orderId="ORD-"+Date.now();
+
+    renderPayment();
+
+}
+
 function renderPayment(){
   const isHi=getLang()==='hi';
   const cfg=SITE_CFG;
@@ -308,8 +359,22 @@ function renderPayment(){
   let qrSrc = "";
   const upiId = cfg.upi_id;
   const storeName = cfg.upi_name || "ShopZone";
-  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-  const total = cart.reduce((sum, item) => sum + (Number(item.price) * Number(item.qty)), 0);
+  let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+if(cart.length===0){
+    cart = JSON.parse(localStorage.getItem("retryPaymentCart") || "[]");
+}
+
+let total = cart.reduce((sum,item)=>{
+    return sum + Number(item.price) * Number(item.qty);
+},0);
+
+if(!total){
+    total = Number(localStorage.getItem("retryPaymentAmount") || 0);
+}
+
+localStorage.setItem("retryPaymentAmount", total);
+localStorage.setItem("retryPaymentCart", JSON.stringify(cart));
   const orderId = "ORD-" + Date.now();
 
   if (upiId) {
@@ -343,7 +408,8 @@ function renderPayment(){
             <input type="radio" class="pay-opt-radio" name="pay" ${PAYMENT_METHOD==='qr'?'checked':''}>
             <span class="pay-opt-label">${isHi?'Scan QR Code':'Scan QR Code'}</span>
             <span class="pay-opt-icon"><img src="images/payment/qricon.png" style='height: 21px' ></span>
-          </div>
+         
+            </div>
           ${QR_LOADING?`
             <div class="upi-sub">
                 <div style="padding:30px;text-align:center;">
@@ -353,7 +419,22 @@ function renderPayment(){
             </div>
           `:PAYMENT_METHOD==="qr"?`
             <div class="upi-sub">
-                ${qrSrc ? `<div class="qr-box"><img src="${qrSrc}"><div style="font-size:11px;">${cfg.upi_id||""}</div></div>` : ""}
+                ${qrSrc ? `<div class="qr-box"><img id="upiQR" src="${qrSrc}">
+                  <button
+id="regenQR"
+style="display:none;margin-top:12px;"
+onclick="generateNewQR()">
+Refresh QR
+</button>
+                  <div style="font-size:11px;">${cfg.upi_id||""}</div>
+                <div id="qrTimer"
+     style="margin-top:10px;
+            font-size:13px;
+            color:#d32f2f;
+            font-weight:bold;">
+03:00
+</div>
+                </div>` : ""}
             </div>
           `:''}
 
@@ -459,6 +540,14 @@ function renderPayment(){
     </button>
   </div>
   `;
+  // Render complete hone ke baad page top par le jao
+setTimeout(() => {
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+}, 50);
+  startQrTimer();
 }
 
 // यह नया फ़ंक्शन सब-ऐप्स (Google Pay, Paytm आदि) को चुनने में मदद करेगा बिना तुरंत पेमेंट ट्रिगर किए
@@ -488,31 +577,49 @@ function selectPayMethod(method){
 let PAYMENT_METHOD=''; // default
 let QR_LOADING = false;
 // सबसे नीचे के मुख्य "Continue / आगे बढ़ें" बटन के क्लिक लॉजिक को भी सिंक किया
-function proceedPay(){
-  const isHi = getLang() === 'hi';
-  if (!PAYMENT_METHOD) {
-     showToast(isHi ? "कृपया भुगतान विधि चुनें" : "Please select payment method");
-     return;
-  }
-  
-  if (PAYMENT_METHOD === 'phonepe') {
-     launchSpecificUpi('PhonePe');
-     return;
-  }
-  
-  if (PAYMENT_METHOD === 'upi') {
-     if (!SELECTED_SUB_APP) {
-       showToast(isHi ? "कृपया सूची से एक ऐप चुनें" : "Please select an app from the list");
-       return;
-     }
-     if (SELECTED_SUB_APP === 'Generic') {
-       initiateGenericUpiPayment();
-     } else {
-       launchSpecificUpi(SELECTED_SUB_APP);
-     }
-     return;
-  }
-  simulatePayment(PAYMENT_METHOD);
+function proceedPay() {
+  let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+if (cart.length === 0) {
+    cart = JSON.parse(localStorage.getItem("retryPaymentCart") || "[]");
+}
+
+let total = cart.reduce((sum, item) =>
+    sum + Number(item.price) * Number(item.qty), 0);
+
+if (!total) {
+    total = Number(localStorage.getItem("retryPaymentAmount") || 0);
+}
+
+// Save for retry again
+localStorage.setItem("retryPaymentCart", JSON.stringify(cart));
+localStorage.setItem("retryPaymentAmount", total);
+   const isHi = getLang() === "hi";
+
+    if (!PAYMENT_METHOD) {
+        showToast(isHi ? "कृपया भुगतान विधि चुनें" : "Please select payment method");
+        return;
+    }
+
+    if (PAYMENT_METHOD === "phonepe") {
+        launchSpecificUpi("PhonePe");
+        return;
+    }
+
+    if (PAYMENT_METHOD === "upi") {
+
+        if (!SELECTED_SUB_APP) {
+            showToast(isHi ? "पहले UPI App चुनें" : "Please select UPI App");
+            return;
+        }
+
+        launchSpecificUpi(SELECTED_SUB_APP);
+        return;
+    }
+
+    if (PAYMENT_METHOD === "qr") {
+        simulatePayment("QR");
+    }
 }
 
 function showUnavail(){
@@ -522,70 +629,89 @@ function showUnavail(){
 
 /* Generic UPI Payment */
 function initiateGenericUpiPayment() {
-  launchSpecificUpi("Any UPI App");
+  launchSpecificUpi("Any UPI App");   // This will now use clean upi:// link
 }
 
 /* ══════════════ FIXED REDIRECTION & PAY LOGIC ══════════════ */
 
 
 /* Forcefully Launch Specific App via Correct Android Intent Formats */
-function launchSpecificUpi(appName) {
-  const isHi = getLang() === 'hi';
-  const cfg = SITE_CFG;
+function launchSpecificUpi(app = "") {
 
-  if (!cfg.upi_id) {
-    return showToast(isHi ? "UPI ID सेट नहीं है" : "UPI ID not configured");
-  }
+    const cfg = SITE_CFG;
 
-  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-  const total = cart.reduce((s, i) => s + Number(i.price) * Number(i.qty), 0);
-  const orderId = "ORD-" + Date.now();
+    if (!cfg.upi_id) {
+        showToast("UPI ID not configured");
+        return;
+    }
 
-  // Standard UPI deep-link query parameters
-  const queryParams = `pa=${encodeURIComponent(cfg.upi_id)}&pn=${encodeURIComponent(cfg.upi_name || "ShopZone")}&am=${total}&cu=INR&tn=${encodeURIComponent(orderId)}`;
-  const genericLink = `upi://pay?${queryParams}`;
+    let total = Number(localStorage.getItem("retryPaymentAmount") || 0);
 
-  // Packages dictionary mapping for Android Intent Scheme
-  const packages = {
-    "Google Pay": "com.google.android.apps.nbu.paisa.user",
-    "PhonePe": "com.phonepe.app",
-    "Paytm": "net.one97.paytm",
-    "BHIM": "in.org.npci.upiapp"
-  };
+    if (!total) {
 
-  const pkg = packages[appName];
-  let launchUrl = genericLink;
+        let cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
-  // Formatting deep intent explicitly to trigger Android system choices cleanly
-  if (pkg) {
-    launchUrl = `intent://pay?${queryParams}#Intent;scheme=upi;package=${pkg};S.browser_fallback_url=${encodeURIComponent(genericLink)};end`;
-  }
+        if (cart.length === 0) {
+            cart = JSON.parse(localStorage.getItem("retryPaymentCart") || "[]");
+        }
 
-  showToast(isHi ? `${appName} खोल रहे हैं...` : `Opening ${appName}...`);
+        total = cart.reduce((sum, item) =>
+            sum + Number(item.price) * Number(item.qty), 0);
+    }
 
-  // Start the UI simulation overlay processing 
-  simulatePayment(appName);
+    const orderId = "ORD" + Date.now();
 
-  // Attempt forceful redirection
-  setTimeout(() => {
-    window.location.href = launchUrl;
+    const params =
+        "pa=" + encodeURIComponent(cfg.upi_id) +
+        "&pn=" + encodeURIComponent(cfg.upi_name || "ShopZone") +
+        "&tr=" + encodeURIComponent(orderId) +
+        "&tn=" + encodeURIComponent("Order Payment") +
+        "&am=" + total.toFixed(2) +
+        "&cu=INR";
 
-    // Double Fallback Validation Layer
-    setTimeout(() => {
-      // If the page is still active on our system process panel, fallback to open universal app chooser
-      if (document.getElementById("paymentProcessing").style.display === "flex") {
-        window.location.href = genericLink;
-        
-        // Final ultimate failure route: direct to Finance app space
-        setTimeout(() => {
-          if (document.getElementById("paymentProcessing").style.display === "flex") {
-            showToast(isHi ? "UPI ऐप नहीं मिला। Play Store खोल रहे हैं..." : "No UPI app found. Opening Play Store...");
-            window.open("https://play.google.com/store/apps/category/FINANCE", "_blank");
-          }
-        }, 2000);
-      }
-    }, 1500);
-  }, 350);
+    switch(app){
+
+        case "PhonePe":
+
+            window.location.href =
+            "phonepe://pay?" + params;
+
+            break;
+
+
+        case "Google Pay":
+
+            window.location.href =
+            "tez://upi/pay?" + params;
+
+            break;
+
+
+        case "Paytm":
+
+            window.location.href =
+            "paytmmp://pay?" + params;
+
+            break;
+
+
+        case "BHIM":
+
+            window.location.href =
+            "bhim://upi/pay?" + params;
+
+            break;
+
+
+        default:
+
+            window.location.href =
+            "upi://pay?" + params;
+
+            break;
+    }
+
+    simulatePayment("UPI");
 }
 /* QR Modal */
 function showQRModal() {
@@ -593,27 +719,18 @@ function showQRModal() {
   alert(isHi ? "QR Code Modal (aap alag se bana sakte hain)" : "QR Code coming soon");
   // Better: Implement a nice modal here if needed
 }
-function proceedPay(){
-  const isHi=getLang()==='hi';
-  if(!PAYMENT_METHOD){
-     showToast(isHi ? "कृपया भुगतान विधि चुनें" : "Please select payment method");
-     return;
-  }
-  if(PAYMENT_METHOD==='phonepe'){
-     launchSpecificUpi('PhonePe');
-     return;
-  }
-  if(PAYMENT_METHOD==='upi'){
-     initiateGenericUpiPayment();
-     return;
-  }
-  simulatePayment(PAYMENT_METHOD);
-}
-
 
 function simulatePayment(method) {
     const isHi = getLang() === "hi";
 
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+const total = cart.reduce((sum, item) => {
+    return sum + Number(item.price) * Number(item.qty);
+}, 0);
+
+localStorage.setItem("retryAmount", total);
+localStorage.setItem("retryCart", JSON.stringify(cart));
     // Show popup
     document.getElementById("paymentProcessing").style.display = "flex";
 
@@ -690,9 +807,9 @@ function simulatePayment(method) {
 
             progressFill.style.width = "100%";
 
-            s4.innerHTML = "✓ Order finalized";
+            s4.innerHTML = "X Order finalized";
             activateStep(4);
-            s4.classList.remove('fail');
+            s4.classList.add('fail');
            //x s4.classList.add('done');
             localStorage.removeItem("cart");
 
@@ -711,7 +828,11 @@ function simulatePayment(method) {
 
 /* ══════════════ ORDER SUMMARY HTML (shared sidebar) ══════════════ */
 function renderOrderSummaryHTML(isHi, delivStr){
-  const cart=JSON.parse(localStorage.getItem('cart')||'[]');
+  let cart=JSON.parse(localStorage.getItem('cart')||'[]');
+
+if(cart.length===0){
+    cart=JSON.parse(localStorage.getItem('retryPaymentCart')||'[]');
+}
   let subtotal=0;
   cart.forEach(i=>subtotal+=i.price*i.qty);
   return `
@@ -747,6 +868,24 @@ function renderOrderSummaryHTML(isHi, delivStr){
     initCheckout();
 
     function initCheckout() {
+       const params = new URLSearchParams(window.location.search);
+
+    if (params.get("retry") === "1") {
+
+        const savedAddr = localStorage.getItem("checkoutAddress");
+
+        if (savedAddr) {
+            ADDRESS_DATA = JSON.parse(savedAddr);
+        }
+
+        STEP = 2;
+        localStorage.setItem(STEP_KEY, "2");
+
+        renderSteps(2);
+        renderPayment();
+        return;
+    }
+
 
         if (savedStep === 2 && savedAddr) {
 
