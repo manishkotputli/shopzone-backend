@@ -102,10 +102,24 @@ async function start() {
       console.log(`   Login: ${process.env.ADMIN_USER || 'admin'} / ${process.env.ADMIN_PASS || 'shopzone123'}\n`);
     });
   }catch (err) {
-  console.error("DATABASE ERROR");
-  console.error(err);
-  process.exit(1);
-}
+    console.error("DATABASE ERROR");
+    console.error("Message:", err.message);
+
+    if (err.parent) {
+        console.error("Code:", err.parent.code);
+        console.error("Errno:", err.parent.errno);
+        console.error("SQL Message:", err.parent.sqlMessage);
+    }
+
+    if (err.sql) {
+        console.error("SQL:");
+        console.error(err.sql);
+    }
+
+    console.error(err);
+
+    process.exit(1);
+  }
 }
 
 start();
