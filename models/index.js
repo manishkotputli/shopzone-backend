@@ -140,7 +140,7 @@ const SEED_CONFIG = [
 ];
 
 async function syncDB() {
-  await sequelize.sync({ alter: true });
+  await sequelize.sync();
 
   const pCount = await Product.count();
   if (pCount === 0) {
