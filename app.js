@@ -29,6 +29,7 @@ app.use(async (req, res, next) => {
 const { sequelize, syncDB, Product } = require('./models');
 const adminRoutes = require('./routes/admin');
 const apiRoutes = require('./routes/api');
+// routes/api.js (add this route)
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -82,6 +83,9 @@ app.get('/deals',        (req, res) => res.render('pages/deals'));
 app.get('/about',        (req, res) => res.render('pages/about'));
 app.get('/contact',      (req, res) => res.render('pages/contact'));
 app.get('/order-success',(req, res) => res.render('pages/order-success'));
+
+
+
 
 
 

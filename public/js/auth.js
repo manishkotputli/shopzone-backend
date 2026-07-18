@@ -5,35 +5,27 @@ function getUser(){ try{ return JSON.parse(sessionStorage.getItem('sz_user')||'n
 function loginUser(name,mobile){ sessionStorage.setItem('sz_user',JSON.stringify({name,mobile})); sessionStorage.removeItem('sz_otp'); sessionStorage.removeItem('sz_otp_mobile'); }
 function logoutUser(){ sessionStorage.removeItem('sz_user'); sessionStorage.removeItem('sz_otp'); sessionStorage.removeItem('sz_otp_mobile'); }
 
-// Generate OTP — calls real API if configured, else demo fallback
 async function generateOTP(mobile){
   const otp=String(Math.floor(100000+Math.random()*900000));
   sessionStorage.setItem('sz_otp',otp);
   sessionStorage.setItem('sz_otp_mobile',mobile);
 
-  // ── Real OTP API (replace URL/key in admin Site Settings) ──
-  // The API endpoint and key come from your SMS provider (e.g. Fast2SMS, 2Factor, MSG91)
-  // Admin can set otp_api_url and otp_api_key in Admin Panel → Store Settings
   try{
-    const cfgRes=await fetch('/api/config');
-    const cfgData=await cfgRes.json();
-    const apiUrl=cfgData?.config?.otp_api_url;
-    const apiKey=cfgData?.config?.otp_api_key;
-
-    if(apiUrl && apiUrl!=='https://api.example.com/send-otp' && apiKey && apiKey!=='YOUR_OTP_API_KEY_HERE'){
-      // POST to your SMS API — adjust body format as per your provider
-      await fetch(apiUrl,{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-        body:JSON.stringify({ mobile:'+91'+mobile, otp, message:`Your ShopZone OTP is ${otp}. Valid for 10 minutes.` })
-      });
-      console.log('[ShopZone] OTP sent via SMS API to +91'+mobile);
-      return otp;
+    const res = await fetch('/api/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mobile, otp })
+    });
+    const data = await res.json();
+    if (data.success) {
+      console.log('[ShopZone] OTP sent to +91' + mobile);
+    } else {
+      console.warn('[ShopZone] OTP send failed:', data.error);
     }
-  }catch(e){ console.warn('[ShopZone] SMS API call failed, using demo OTP',e.message); }
+  }catch(e){
+    console.warn('[ShopZone] OTP request failed', e.message);
+  }
 
-  // ── Demo fallback — show on screen ──
-  console.log(`[ShopZone Demo] OTP for +91${mobile}: ${otp}`);
   return otp;
 }
 
@@ -101,19 +93,18 @@ async function sendOTP_popup(){
   const mob=document.getElementById('aMobile').value.trim().replace(/\D/g,'');
   if(!name){ alert(isHi?'कृपया नाम दर्ज करें':'Please enter your name'); return; }
   if(mob.length!==10){ alert(isHi?'सही 10 अंकों का मोबाइल नंबर दर्ज करें':'Enter valid 10-digit mobile'); return; }
-  const otp=await generateOTP(mob);
+  await generateOTP(mob); // OTP goes to console + SMS, not shown here
   document.getElementById('authS1').style.display='none';
   document.getElementById('authS2').style.display='block';
   document.getElementById('aOtpSub').textContent=(isHi?'OTP भेजा गया +91 ':'OTP sent to +91 ')+mob;
-  document.getElementById('aOtpDemo').innerHTML=`📱 <strong>${isHi?'डेमो OTP':'Demo OTP'}:</strong> <span style="font-size:20px;font-weight:800;letter-spacing:4px;">${otp}</span><br><small style="color:#565959;">${isHi?'(Real app में SMS द्वारा आएगा)':'(In production this comes via SMS API)'}</small>`;
+  document.getElementById('aOtpDemo').style.display='none'; // hide demo box permanently
   setTimeout(()=>document.getElementById('aOtp')?.focus(),100);
 }
 
 async function resendOTP_popup(){
   const mob=sessionStorage.getItem('sz_otp_mobile')||'';
   if(!mob){ document.getElementById('authS1').style.display='block'; document.getElementById('authS2').style.display='none'; return; }
-  const otp=await generateOTP(mob);
-  document.getElementById('aOtpDemo').innerHTML=`📱 <strong>OTP:</strong> <span style="font-size:20px;font-weight:800;letter-spacing:4px;">${otp}</span>`;
+  await generateOTP(mob);
   if(typeof showToast==='function') showToast('OTP resent!');
 }
 

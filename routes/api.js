@@ -3,6 +3,7 @@ const router  = express.Router();
 const { Product, SiteConfig, ProductVariant, Review } = require('../models');
 const { Op } = require('sequelize');
 const { encryptId, decryptId } = require("../helpers/cryptoHelper");
+const axios = require('axios'); // npm install axios --break-system-packages, or use fetch
 
 // Products list
 router.get('/products', async (req, res) => {
@@ -129,6 +130,43 @@ router.get('/config', async (req, res) => {
     }});
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
+router.post('/send-otp', async (req, res) => {
+  try {
+    const { mobile, otp } = req.body;
+    if (!mobile || !/^\d{10}$/.test(mobile)) {
+      return res.status(400).json({ error: 'Invalid mobile number' });
+    }
+    if (!otp || !/^\d{6}$/.test(otp)) {
+      return res.status(400).json({ error: 'Invalid OTP' });
+    }
+
+    const apiUrl = req.app.locals.CFG.otp_api_url;
+    const apiKey = req.app.locals.CFG.otp_api_key;
+    const templateId = '0afbdeb0-785d-4dd0-bd48-365a182df276';
+
+    if (!apiUrl || !apiKey) {
+      return res.status(500).json({ error: 'OTP service not configured' });
+    }
+
+    await axios.post(apiUrl, {
+      phoneNumber: '+91' + mobile,
+      templateId,
+      variables: { otp, appName: 'ShopZone' }
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': apiKey
+      }
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[OTP] Send failed:', err.message);
+    res.status(500).json({ error: 'Failed to send OTP' });
   }
 });
 
