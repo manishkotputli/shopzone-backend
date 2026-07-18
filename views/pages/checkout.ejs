@@ -426,7 +426,7 @@ style="display:none;margin-top:12px;"
 onclick="generateNewQR()">
 Refresh QR
 </button>
-                  <div style="font-size:11px;">${cfg.upi_id||""}</div>
+                  
                 <div id="qrTimer"
      style="margin-top:10px;
             font-size:13px;
@@ -636,84 +636,113 @@ function initiateGenericUpiPayment() {
 
 
 /* Forcefully Launch Specific App via Correct Android Intent Formats */
+/* Enhanced with Native PhonePe + Paytm Support */
 function launchSpecificUpi(app = "") {
-
     const cfg = SITE_CFG;
-
     if (!cfg.upi_id) {
-        showToast("UPI ID not configured");
+        showToast("UPI ID not configured in site settings");
         return;
     }
 
     let total = Number(localStorage.getItem("retryPaymentAmount") || 0);
-
     if (!total) {
-
         let cart = JSON.parse(localStorage.getItem("cart") || "[]");
-
         if (cart.length === 0) {
             cart = JSON.parse(localStorage.getItem("retryPaymentCart") || "[]");
         }
+        total = cart.reduce((sum, item) => sum + Number(item.price) * Number(item.qty), 0);
+    }
 
-        total = cart.reduce((sum, item) =>
-            sum + Number(item.price) * Number(item.qty), 0);
+    if (!total || total <= 0) {
+        showToast("Invalid amount");
+        return;
     }
 
     const orderId = "ORD" + Date.now();
+    const note = `Order #${orderId}`;
 
-    const params =
-        "pa=" + encodeURIComponent(cfg.upi_id) +
-        "&pn=" + encodeURIComponent(cfg.upi_name || "ShopZone") +
-        "&tr=" + encodeURIComponent(orderId) +
-        "&tn=" + encodeURIComponent("Order Payment") +
-        "&am=" + total.toFixed(2) +
-        "&cu=INR";
+    // Base parameters
+    const baseParams = {
+        pa: cfg.upi_id,
+        pn: cfg.upi_name || "Your Store",
+        tr: orderId,
+        tn: note,
+        am: total.toFixed(2),
+        cu: "INR"
+    };
 
-    switch(app){
+    const paramString = Object.keys(baseParams)
+        .map(key => `${key}=${encodeURIComponent(baseParams[key])}`)
+        .join('&');
 
-        case "PhonePe":
+    let intentUrl = "";
 
-            window.location.href =
-            "phonepe://pay?" + params;
+    switch (app.toLowerCase()) {
+        case "phonepe":
+        case "phonepe native":
+            // PhonePe Native (Best format)
+            const phonePeData = {
+                contact: {
+                    cbcName: "",
+                    nickName: "",
+                    vpa: cfg.upi_id,
+                    type: "VPA"
+                },
+                p2pPaymentCheckoutParams: {
+                    note: note,
+                    isByDefaultKnownContact: true,
+                    initialAmount: Math.round(total * 100), // paise
+                    currency: "INR",
+                    checkoutType: "DEFAULT",
+                    transactionContext: "p2p"
+                }
+            };
 
+            const encodedData = btoa(JSON.stringify(phonePeData));
+            intentUrl = `phonepe://native?data=${encodedData}&id=p2ppayment`;
             break;
 
-
-        case "Google Pay":
-
-            window.location.href =
-            "tez://upi/pay?" + params;
-
+        case "paytm":
+            // Paytm Native Cash Wallet (as per your example)
+            intentUrl = `paytmmp://cash_wallet?${paramString}&featuretype=money_transfer`;
+            break;
+case "google pay":
+        case "gpay":
+        case "tez":
+            // Best working formats for Google Pay (try in order)
+            intentUrl = `intent://upi/pay?${baseParams}#Intent;scheme=tez;package=com.google.android.apps.nbu.paisa.user;end`;
+            // Fallback if above doesn't work
+            setTimeout(() => {
+                if (document.hidden === false) { // if user is still on page
+                    window.location.href = `upi://pay?${baseParams}`;
+                }
+            }, 1500);
             break;
 
-
-        case "Paytm":
-
-            window.location.href =
-            "paytmmp://pay?" + params;
-
+        case "bhim":
+            intentUrl = `bhim://upi/pay?${paramString}`;
             break;
-
-
-        case "BHIM":
-
-            window.location.href =
-            "bhim://upi/pay?" + params;
-
-            break;
-
 
         default:
-
-            window.location.href =
-            "upi://pay?" + params;
-
+            // Generic UPI (best compatibility - opens app chooser)
+            intentUrl = `upi://pay?${paramString}`;
             break;
     }
 
+    console.log(`🚀 Launching ${app || 'Generic'} UPI:`, intentUrl);
+
+    try {
+        window.location.href = intentUrl;
+    } catch (e) {
+        console.error("Intent launch failed", e);
+        // Fallback
+        window.location.href = `upi://pay?${paramString}`;
+    }
+
+    // Show processing screen
     simulatePayment("UPI");
 }
-/* QR Modal */
+
 function showQRModal() {
   const isHi = getLang()==='hi';
   alert(isHi ? "QR Code Modal (aap alag se bana sakte hain)" : "QR Code coming soon");

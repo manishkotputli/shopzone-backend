@@ -32,14 +32,7 @@ router.get('/panel', requireAdmin, (req, res) => res.render('admin/panel'));
 
 
 
-router.post('/api/upload-image', requireAdmin, uploadProductImage.single('image'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ success:false, error:'No file' });
-    const url = `/uploads/products/${req.file.filename}`;
-    res.json({ success:true, url });
-  } catch(err) { res.status(500).json({ success:false, error:err.message }); }
-});
-// ════════════════ PRODUCTS ════════════════
+
 router.get('/api/products', requireAdmin, async (req, res) => {
   try {
     const { search, category, brand } = req.query;
@@ -116,26 +109,40 @@ function withEncryptedId(p) {
   return obj;
 }
 
-router.post('/api/products', requireAdmin, uploadProductImage.single('image'), async (req, res) => {
-  try {
+router.post('/api/products',
+    requireAdmin,
+    uploadProductImage.array('images',20),
+    async (req,res)=>{
+       try {
     const body = coerce({...req.body});
-    if (req.file) {
-    body.image_url = `/uploads/products/${req.file.filename}`;
+   if(req.files && req.files.length){
+
+    const images=req.files.map(file=>"/uploads/products/"+file.filename);
+
+    body.image_url=images[0];      // Main Image
+    body.images=images;            // JSON Column
+
 }
     const p = await Product.create(body);
     res.json({ success:true, product:p });
   } catch(err) { res.status(500).json({ success:false, error:err.message }); }
 });
 
-router.put('/api/products/:id', requireAdmin, uploadProductImage.single('image'), async (req, res) => {
- //console.log("=== PUT ROUTE HIT ===");
-
+router.put('/api/products/:id',
+    requireAdmin,
+    uploadProductImage.array('images',20),
+    async (req,res)=>{
   try {
     const p = await Product.findByPk(req.params.id);
     if (!p) return res.status(404).json({ success:false, error:'Not found' });
     const body = coerce({...req.body});
-  if (req.file) {
-    body.image_url = `/uploads/products/${req.file.filename}`;
+if(req.files && req.files.length){
+
+    const images=req.files.map(file=>"/uploads/products/"+file.filename);
+
+    body.image_url=images[0];
+    body.images=images;
+
 }
   
 

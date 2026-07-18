@@ -803,16 +803,20 @@ function renderAddProduct(product) {
     console.log("p.images =", p.images);
     console.log("typeof =", typeof p.images);
     console.log("isArray =", Array.isArray(p.images));
-    let images = [];
+let images = [];
 
-if (typeof p.images === "string") {
+if (Array.isArray(p.images)) {
+    images = p.images;
+} else if (typeof p.images === "string" && p.images.trim() !== "") {
     try {
         images = JSON.parse(p.images);
     } catch (e) {
         images = [];
     }
-} else if (Array.isArray(p.images)) {
-    images = p.images;
+}
+
+if (!images.length && p.image_url) {
+    images = [p.image_url];
 }
 
   document.getElementById('mainContent').innerHTML = `
@@ -999,25 +1003,27 @@ if (typeof p.images === "string") {
         <h2>🖼️ Product Image</h2>
         <div class="fg">
           <label>Upload Image</label>
-          <input type="file" id="pImg" accept="image/*" onchange="prevImg(this,'imgP')">
+          <input
+    type="file"
+    id="pImg"
+    accept="image/*"
+    multiple
+    onchange="prevMultipleImg(this,'imgP')">
 <div id="imgP" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">
-  ${p.image_url
-    ? `<div class="imgprev imgprev-lg"><img src="${p.image_url}"></div>`
-    : `<div class="imgprev imgprev-lg"><span>Click to upload</span></div>`}
+
+${images.length
+?images.map(img=>`
+<div class="imgprev imgprev-lg">
+<img src="${img}">
 </div>
-    ${
-        images.length
-    ? images.map(img =>  `
-            <div class="imgprev imgprev-lg">
-                <img src="${img}">
-            </div>
-        `).join("")
-        : `
-            <div class="imgprev imgprev-lg">
-                <span>Click to upload</span>
-            </div>
-        `
-    }
+`).join("")
+:`
+<div class="imgprev imgprev-lg">
+<span>Click to upload</span>
+</div>
+`}
+
+</div>
 </div>
           <input type="hidden" id="pImgUrl" value="${p.image_url||''}">
         </div>
@@ -1110,6 +1116,32 @@ function prevImg(input, previewId) {
   reader.readAsDataURL(input.files[0]);
 }
 
+
+function prevMultipleImg(input,id){
+
+    const box=document.getElementById(id);
+
+    box.innerHTML="";
+
+    [...input.files].forEach(file=>{
+
+        const reader=new FileReader();
+
+        reader.onload=function(e){
+
+            box.innerHTML+=`
+            <div class="imgprev imgprev-lg">
+                <img src="${e.target.result}">
+            </div>
+            `;
+
+        }
+
+        reader.readAsDataURL(file);
+
+    });
+
+}
 async function saveProduct() {
   const eid = document.getElementById('editId').value;
   const name = document.getElementById('pName').value.trim();
@@ -1137,8 +1169,14 @@ async function saveProduct() {
   // const f = document.getElementById('pImg');
   // if (f && f.files[0]) fd.append('image', f.files);
 
-const imgFile = document.getElementById("pImg").files[0];
-if (imgFile) fd.append("image", imgFile);
+const imgFiles = document.getElementById("pImg").files;
+const files=document.getElementById("pImg").files;
+
+for(const file of files){
+
+    fd.append("images",file);
+
+}
   const btn = document.querySelector('[onclick="saveProduct()"]');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
 

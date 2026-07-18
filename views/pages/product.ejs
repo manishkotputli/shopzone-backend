@@ -482,11 +482,15 @@ function shareProduct(){
   }
 }
 
+
 function renderProduct(isHi){
   const p = CURRENT_PRODUCT;
   const variants = p.variants||[];
   const reviews  = p.reviews||[];
-
+const galleryImages =
+    p.images && p.images.length
+        ? p.images
+        : (p.image_url ? [p.image_url] : []);
   /* ── variant groups ── */
   const variantGroups = {};
   variants.forEach(v=>{ (variantGroups[v.variant_type]=variantGroups[v.variant_type]||[]).push(v); });
@@ -521,10 +525,9 @@ function renderProduct(isHi){
   const delivDate = new Date(); delivDate.setDate(delivDate.getDate()+7);
   const delivStr = delivDate.toLocaleDateString(isHi?'hi-IN':'en-IN',{weekday:'long',day:'numeric',month:'long'});
 
-  /* ── images ── */
-  const mainImg = p.image_url
-  ? `<img src="${p.image_url}" id="mainImgEl" alt="${p.name}">`
-  : `<span id="mainImgEl" style="font-size:100px;">${p.emoji||'📦'}</span>`;
+const mainImg = galleryImages.length
+    ? `<img src="${galleryImages[0]}" id="mainImgEl" alt="${p.name}">`
+    : `<span id="mainImgEl" style="font-size:100px;">${p.emoji||'📦'}</span>`;
 
   /* ── highlights ── */
   const hls = Array.isArray(p.highlights)&&p.highlights.length ? p.highlights : (p.desc?p.desc.split(',').map(s=>s.trim()):[]);
@@ -591,7 +594,9 @@ function renderProduct(isHi){
       <div class="main-img-box">${mainImg}</div>
       <div class="img-meta-row">
        <div class="img-dots" id="imgDots">
-  ${variantImgs.length ? variantImgs.map((_,i)=>`<span class="${i===0?'active':''}"></span>`).join('') : '<span class="active"></span>'}
+  ${galleryImages.map((_,i)=>`
+<span class="${i===0?'active':''}"></span>
+`).join("")}
 </div>
         <div class="img-icon-actions">
 <button onclick="toggleWishlist(this)">
@@ -604,17 +609,22 @@ function renderProduct(isHi){
     </div>
 
     <!-- Thumbnail strip with mini price -->
-    ${variantImgs.length ? `
-    <div class="thumb-strip" id="thumbRow">
-      ${variantImgs.map((v,i)=>`
-      <div class="thumb-cell ${i===0?'active':''}"
-        data-type="${v.variant_type}" data-value="${v.variant_value}"
-        onclick="selectVariant('${v.variant_type}','${v.variant_value}',${parseFloat(v.price_modifier)||0},${parseInt(v.stock)||0},'${v.image_url}',this)">
-        <img src="${v.image_url}">
-        <div class="thumb-title">${v.variant_value}</div>
-        <div class="thumb-price">₹${(p.price + (parseFloat(v.price_modifier)||0)).toLocaleString('en-IN')}</div>
-      </div>`).join('')}
-    </div>${colorLabelHTML}` : ''}
+   ${variantImgs.length ? `
+${colorLabelHTML}
+
+<div class="thumb-strip" id="thumbRow">
+  ${variantImgs.map((v,i)=>`
+  <div class="thumb-cell ${i===0?'active':''}"
+      data-type="${v.variant_type}"
+      data-value="${v.variant_value}"
+      onclick="selectVariant('${v.variant_type}','${v.variant_value}',${parseFloat(v.price_modifier)||0},${parseInt(v.stock)||0},'${v.image_url}',this)">
+      <img src="${v.image_url}">
+      <div class="thumb-title">${v.variant_value}</div>
+      <div class="thumb-price">₹${(p.price + (parseFloat(v.price_modifier)||0)).toLocaleString('en-IN')}</div>
+  </div>
+  `).join('')}
+</div>
+` : ''}
 
     <!-- Variant / size selector (only for non-image variant types) -->
     ${variantHTML?`<div class="pdp-section" style="padding-top:0;">${variantHTML}</div>`:''}
@@ -781,6 +791,8 @@ function renderProduct(isHi){
       if(btn) selectVariant(type, def.variant_value, parseFloat(def.price_modifier)||0, parseInt(def.stock)||0, def.image_url||'', btn);
     }
   });
+
+  startAutoSlider();
 }
 
 /* ── Variant selection ── */
@@ -853,4 +865,41 @@ function updatePrice() {
 
 loadProduct();
 document.getElementById('langToggle').addEventListener('click',()=>setTimeout(loadProduct,50));
+
+
+let sliderInterval;
+
+function startAutoSlider() {
+
+    if (sliderInterval) clearInterval(sliderInterval);
+
+   const imgs =
+    CURRENT_PRODUCT.images && CURRENT_PRODUCT.images.length
+        ? CURRENT_PRODUCT.images
+        : [CURRENT_PRODUCT.image_url].filter(Boolean);
+
+    if (imgs.length <= 1) return;
+
+    let index = 0;
+
+    sliderInterval = setInterval(() => {
+
+        index++;
+
+        if (index >= imgs.length) index = 0;
+
+        const mainImg = document.getElementById("mainImgEl");
+
+        if (mainImg) {
+            mainImg.src = imgs[index];
+        }
+
+        // dots update
+        document.querySelectorAll("#imgDots span").forEach((dot, i) => {
+            dot.classList.toggle("active", i === index);
+        });
+
+    }, 2500); // 2.5 sec
+}
+
 </script>
