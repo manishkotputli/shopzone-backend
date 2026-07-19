@@ -30,7 +30,30 @@ router.get('/',      (req, res) => res.redirect('/admin/panel'));
 router.get('/panel', requireAdmin, (req, res) => res.render('admin/panel'));
 
 
+router.post(
+    "/api/variants/upload-images",
+    requireAdmin,
+    uploadProductImage.array("images", 10),
+    async (req, res) => {
 
+        if (!req.files || !req.files.length) {
+            return res.json({
+                success: false,
+                error: "No images"
+            });
+        }
+
+        const images = req.files.map(file =>
+            "/uploads/products/" + file.filename
+        );
+
+        res.json({
+            success: true,
+            images
+        });
+
+    }
+);
 
 
 router.get('/api/products', requireAdmin, async (req, res) => {
@@ -184,7 +207,15 @@ router.post('/api/products/:id/variants', requireAdmin, async (req, res) => {
     const { variants } = req.body; // array of { variant_type, variant_value, price_modifier, stock, sort_order }
     await ProductVariant.destroy({ where:{ product_id:req.params.id } });
     if (variants && variants.length) {
-      const rows = variants.map((v,i) => ({ ...v, product_id:parseInt(req.params.id), sort_order:i }));
+     const rows = variants.map((v,i) => ({
+    product_id: parseInt(req.params.id),
+    variant_type: v.variant_type,
+    variant_value: v.variant_value,
+    price_modifier: v.price_modifier,
+    stock: v.stock,
+    sort_order: i,
+    images: v.images || []
+}));
       await ProductVariant.bulkCreate(rows);
     }
     const saved = await ProductVariant.findAll({ where:{ product_id:req.params.id }, order:[['sort_order','ASC']] });

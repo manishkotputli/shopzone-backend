@@ -496,7 +496,20 @@ const galleryImages =
   variants.forEach(v=>{ (variantGroups[v.variant_type]=variantGroups[v.variant_type]||[]).push(v); });
 
   // Variants that have an image (e.g. Color) get shown as thumbnails, not as text buttons
-  const variantImgs = variants.filter(v => v.image_url);
+  const variantImgs = variants.filter(v => {
+
+    let imgs = v.images;
+
+    if (typeof imgs === "string") {
+        try {
+            imgs = JSON.parse(imgs);
+        } catch (e) {
+            imgs = [];
+        }
+    }
+
+    return Array.isArray(imgs) && imgs.length;
+});
   const imageVariantTypes = new Set(variantImgs.map(v=>v.variant_type));
 
   // Only render text-button rows for variant types that do NOT have images (Size, Storage, etc.)
@@ -506,10 +519,19 @@ const galleryImages =
       <div class="variant-section">
         <div class="variant-label">${type}: <span id="varSel_${type}" style="font-weight:400;">${isHi?'चुनें':'Select'}</span></div>
         <div class="variant-options">
-          ${opts.map(o=>`
-            <button class="variant-btn ${parseInt(o.stock)<=0?'out-of-stock':''}"
-              data-type="${type}" data-value="${o.variant_value}"
-              onclick="selectVariant('${type}','${o.variant_value}',${parseFloat(o.price_modifier)||0},${parseInt(o.stock)||0},'${o.image_url||''}',this)"
+         ${opts.map(o=>`
+<button
+class="variant-btn ${parseInt(o.stock)<=0?'out-of-stock':''}"
+data-type="${type}"
+data-value="${o.variant_value}"
+onclick="selectVariant(
+'${type}',
+'${o.variant_value}',
+${parseFloat(o.price_modifier)||0},
+${parseInt(o.stock)||0},
+'',
+this
+)"
               title="${parseInt(o.stock)<=0?(isHi?'स्टॉक में नहीं':'Out of Stock'):''}">
               ${o.variant_value}
             </button>`).join('')}
@@ -617,8 +639,17 @@ ${colorLabelHTML}
   <div class="thumb-cell ${i===0?'active':''}"
       data-type="${v.variant_type}"
       data-value="${v.variant_value}"
-      onclick="selectVariant('${v.variant_type}','${v.variant_value}',${parseFloat(v.price_modifier)||0},${parseInt(v.stock)||0},'${v.image_url}',this)">
-      <img src="${v.image_url}">
+      onclick="selectVariant(
+'${v.variant_type}',
+'${v.variant_value}',
+${parseFloat(v.price_modifier)||0},
+${parseInt(v.stock)||0},
+'',
+this
+)">
+      <img src="${(Array.isArray(v.images)
+    ? v.images[0]
+    : JSON.parse(v.images || "[]")[0]) || ''}">
       <div class="thumb-title">${v.variant_value}</div>
       <div class="thumb-price">₹${(p.price + (parseFloat(v.price_modifier)||0)).toLocaleString('en-IN')}</div>
   </div>
@@ -788,7 +819,14 @@ ${colorLabelHTML}
         ? `.thumb-cell[data-type="${type}"][data-value="${def.variant_value}"]`
         : `.variant-btn[data-type="${type}"][data-value="${def.variant_value}"]`;
       const btn = document.querySelector(selector);
-      if(btn) selectVariant(type, def.variant_value, parseFloat(def.price_modifier)||0, parseInt(def.stock)||0, def.image_url||'', btn);
+      if(btn) selectVariant(
+    type,
+    def.variant_value,
+    parseFloat(def.price_modifier)||0,
+    parseInt(def.stock)||0,
+    '',
+    btn
+);
     }
   });
 
@@ -813,11 +851,31 @@ function selectVariant(type, value, priceModifier, stock, imageUrl, el){
     t.classList.toggle('active', t.dataset.value === value);
   });
 
-  if (imageUrl) {
-    const mainEl = document.getElementById('mainImgEl');
-    if (mainEl && mainEl.tagName === 'IMG') mainEl.src = imageUrl;
-  }
-  updatePrice();
+const variant = (CURRENT_PRODUCT.variants || []).find(v =>
+    v.variant_type === type &&
+    v.variant_value === value
+);
+
+let imgs = [];
+
+if (variant) {
+
+    imgs = variant.images || [];
+
+    if (typeof imgs === "string") {
+        try {
+            imgs = JSON.parse(imgs);
+        } catch (e) {
+            imgs = [];
+        }
+    }
+}
+
+if (imgs.length) {
+    startAutoSlider(imgs);
+}
+
+updatePrice();
 }
 
 function setImg(url, el, idx){
@@ -852,7 +910,7 @@ function addToCartProduct(){
 }
 
 function buyNowProduct(){
-  if(!isLoggedIn()){window._authCallback=buyNowProduct;showAuthPopup(buyNowProduct);return;}
+  // if(!isLoggedIn()){window._authCallback=buyNowProduct;showAuthPopup(buyNowProduct);return;}
   addToCartProduct();
   window.location.href='/checkout';
 }
@@ -869,18 +927,23 @@ document.getElementById('langToggle').addEventListener('click',()=>setTimeout(lo
 
 let sliderInterval;
 
-function startAutoSlider() {
+function startAutoSlider(images = null) {
 
     if (sliderInterval) clearInterval(sliderInterval);
 
-   const imgs =
-    CURRENT_PRODUCT.images && CURRENT_PRODUCT.images.length
-        ? CURRENT_PRODUCT.images
-        : [CURRENT_PRODUCT.image_url].filter(Boolean);
+    const imgs = images && images.length
+        ? images
+        : (
+            CURRENT_PRODUCT.images && CURRENT_PRODUCT.images.length
+                ? CURRENT_PRODUCT.images
+                : [CURRENT_PRODUCT.image_url].filter(Boolean)
+        );
 
     if (imgs.length <= 1) return;
 
     let index = 0;
+
+    document.getElementById("mainImgEl").src = imgs[0];
 
     sliderInterval = setInterval(() => {
 
@@ -888,18 +951,9 @@ function startAutoSlider() {
 
         if (index >= imgs.length) index = 0;
 
-        const mainImg = document.getElementById("mainImgEl");
+        document.getElementById("mainImgEl").src = imgs[index];
 
-        if (mainImg) {
-            mainImg.src = imgs[index];
-        }
+    }, 2500);
 
-        // dots update
-        document.querySelectorAll("#imgDots span").forEach((dot, i) => {
-            dot.classList.toggle("active", i === index);
-        });
-
-    }, 2500); // 2.5 sec
 }
-
 </script>

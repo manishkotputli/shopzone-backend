@@ -305,7 +305,7 @@ async function goToPayment(){
     alert(isHi?'कृपया सभी आवश्यक फ़ील्ड भरें':'Please fill all required fields'); return;
   }
   if(mobile.length!==10){ alert(isHi?'सही मोबाइल नंबर दर्ज करें':'Enter valid mobile number'); return; }
-  if(!isLoggedIn()){ showAuthPopup(()=>goToPayment()); return; }
+  // if(!isLoggedIn()){ showAuthPopup(()=>goToPayment()); return; }
 
   ADDRESS_DATA = {
     name, mobile,
@@ -754,16 +754,17 @@ function simulatePayment(method) {
 
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
-const total = cart.reduce((sum, item) => {
-    return sum + Number(item.price) * Number(item.qty);
-}, 0);
+    const total = cart.reduce((sum, item) => {
+        return sum + Number(item.price) * Number(item.qty);
+    }, 0);
 
-localStorage.setItem("retryAmount", total);
-localStorage.setItem("retryCart", JSON.stringify(cart));
+    localStorage.setItem("retryAmount", total);
+    localStorage.setItem("retryCart", JSON.stringify(cart));
+
     // Show popup
     document.getElementById("paymentProcessing").style.display = "flex";
 
-    let timeLeft = 20;
+    let timeLeft = 60;
 
     const countdown = document.getElementById("countdown");
     const progressFill = document.getElementById("progressFill");
@@ -778,18 +779,16 @@ localStorage.setItem("retryCart", JSON.stringify(cart));
     s2.innerHTML = "⏳ Checking payment status...";
     s3.innerHTML = "Waiting for bank confirmation...";
     s4.innerHTML = "Finalizing your order...";
-    s4.classList.remove('fail');
+    s4.classList.remove('fail', 'done');
 
     countdown.textContent = timeLeft;
     progressFill.style.width = "0%";
 
-    // Step elements
     const steps = [s1, s2, s3, s4];
 
     function activateStep(i) {
         steps.forEach((step, index) => {
             step.classList.remove("active", "stdone");
-
             if (index < i) {
                 step.classList.add("done");
             } else if (index === i) {
@@ -798,7 +797,6 @@ localStorage.setItem("retryCart", JSON.stringify(cart));
         });
     }
 
-    // Start with first step active
     activateStep(0);
 
     const timer = setInterval(() => {
@@ -806,26 +804,26 @@ localStorage.setItem("retryCart", JSON.stringify(cart));
         timeLeft--;
         countdown.textContent = timeLeft;
 
-        // Progress Bar
-        const percent = ((20 - timeLeft) / 20) * 100;
+        // Progress Bar (60s ke hisab se)
+        const percent = ((60 - timeLeft) / 60) * 100;
         progressFill.style.width = percent + "%";
 
-        // Step 2
-        if (timeLeft === 16) {
+        // Step 2 — 45s baad (25% time pe)
+        if (timeLeft === 45) {
             s2.innerHTML = "✓ Checking payment status";
             s3.innerHTML = "⏳ Waiting for bank confirmation...";
             activateStep(1);
         }
 
-        // Step 3
-        if (timeLeft === 8) {
+        // Step 3 — 25s baad (~58% time pe)
+        if (timeLeft === 25) {
             s3.innerHTML = "✓ Bank confirmed payment";
             s4.innerHTML = "⏳ Finalizing your order...";
             activateStep(2);
         }
 
-        // Step 4
-        if (timeLeft === 2) {
+        // Step 4 — last 5s
+        if (timeLeft === 5) {
             activateStep(3);
         }
 
@@ -836,10 +834,10 @@ localStorage.setItem("retryCart", JSON.stringify(cart));
 
             progressFill.style.width = "100%";
 
-            s4.innerHTML = "X Order finalized";
+            s4.innerHTML = "✓ Order finalized";
             activateStep(4);
-            s4.classList.add('fail');
-           //x s4.classList.add('done');
+            s4.classList.add('done');   // ✅ fail ki jagah done — success ke liye green sahi hai
+
             localStorage.removeItem("cart");
 
             updateCartCount();
@@ -853,7 +851,6 @@ localStorage.setItem("retryCart", JSON.stringify(cart));
 
     }, 1000);
 }
-
 
 /* ══════════════ ORDER SUMMARY HTML (shared sidebar) ══════════════ */
 function renderOrderSummaryHTML(isHi, delivStr){
@@ -890,9 +887,9 @@ if(cart.length===0){
     const savedAddr = localStorage.getItem("checkoutAddress");
     const savedStep = Number(localStorage.getItem(STEP_KEY) || 1);
 
-    if (!isLoggedIn()) {
-        showAuthPopup(() => initCheckout());
-    }
+    // if (!isLoggedIn()) {
+    //     showAuthPopup(() => initCheckout());
+    // }
 
     initCheckout();
 

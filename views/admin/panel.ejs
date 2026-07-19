@@ -773,19 +773,46 @@ function deleteProduct(id, name) {
   });
 }
 
+async function uploadVariantImages(input){
 
-async function uploadVariantImg(input) {
-  if (!input.files[0]) return;
-  const fd = new FormData();
-  fd.append('image', input.files[0]);
-  const d = await api('/admin/api/upload-image', { method: 'POST', body: fd }); // apna upload endpoint use karo
-  if (d.success) {
-    const td = input.closest('td');
-    td.querySelector('.var-img-url').value = d.url;
-    const prev = td.querySelector('.var-img-prev');
-    prev.src = d.url;
-    prev.style.display = 'block';
-  }
+    if(!input.files.length) return;
+
+    const fd=new FormData();
+
+    [...input.files].forEach(file=>{
+        fd.append("images",file);
+    });
+
+    const d=await api(
+        "/admin/api/variants/upload-images",
+        {
+            method:"POST",
+            body:fd
+        }
+    );
+
+    if(!d.success){
+        return alert(d.error);
+    }
+
+    const td=input.closest("td");
+
+    td.querySelector(".variant-images").value=
+        JSON.stringify(d.images);
+
+    td.querySelector(".variant-preview").innerHTML=
+        d.images.map(img=>`
+            <img
+            src="${img}"
+            style="
+                width:50px;
+                height:50px;
+                object-fit:cover;
+                margin:3px;
+                border-radius:5px;
+            ">
+        `).join("");
+
 }
 
 // ════════════════════════════════════════════════════════
@@ -946,10 +973,35 @@ if (!images.length && p.image_url) {
                 <td><input type="number" value="${v.price_modifier||0}" style="width:80px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
                 <td><input type="number" value="${v.stock||0}" style="width:70px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
                 <td><input type="number" value="${i}" style="width:50px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
-                <td>
-  <input type="file" accept="image/*" class="var-img-inp" onchange="uploadVariantImg(this)">
-  <input type="hidden" class="var-img-url" value="${v.image_url||''}">
-  <img class="var-img-prev" src="${v.image_url||''}" style="width:36px;height:36px;object-fit:contain;display:${v.image_url?'block':'none'};margin-top:4px;">
+               <td>
+
+<input
+type="file"
+multiple
+accept="image/*"
+onchange="uploadVariantImages(this)">
+
+<input
+type="hidden"
+class="variant-images"
+value='${JSON.stringify(v.images || [])}'>
+
+<div class="variant-preview">
+
+${(v.images || []).map(img=>`
+<img
+src="${img}"
+style="
+width:50px;
+height:50px;
+object-fit:cover;
+margin:3px;
+border-radius:5px;
+">
+`).join("")}
+
+</div>
+
 </td>
                 <td><button class="rm-btn" onclick="this.closest('tr').remove()">✕</button></td>
               </tr>`).join('')}
@@ -1064,23 +1116,67 @@ function addSpecRow(k = '', v = '') {
   d.innerHTML = `<input type="text" placeholder="Key e.g. RAM" value="${k.replace(/"/g,'&quot;')}" style="max-width:160px;"><input type="text" placeholder="Value e.g. 8GB" value="${v.replace(/"/g,'&quot;')}"><button type="button" class="rm-btn" onclick="this.parentElement.remove()">✕</button>`;
   document.getElementById('specList').appendChild(d);
 }
-function addVariantRow(type='',value='',pm=0,stock=0,imageUrl='') {
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><input type="text" list="varTypeDL" placeholder="Size/Color" value="${type}" style="width:110px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
-    <td><input type="text" placeholder="M / Red" value="${value}" style="width:100px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
-    <td><input type="number" value="${pm}" style="width:80px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
-    <td><input type="number" value="${stock}" style="width:70px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
-    <td><input type="number" value="0" style="width:50px;padding:5px;border:1.5px solid #ddd;border-radius:4px;font-size:12px;"></td>
-    <td>
-      <input type="file" accept="image/*" class="var-img-inp" onchange="uploadVariantImg(this)">
-      <input type="hidden" class="var-img-url" value="${imageUrl}">
-      <img class="var-img-prev" src="${imageUrl}" style="width:36px;height:36px;object-fit:contain;display:${imageUrl?'block':'none'};margin-top:4px;">
-    </td>
-    <td><button class="rm-btn" onclick="this.closest('tr').remove()">✕</button></td>`;
-  document.getElementById('variantTb').appendChild(tr);
-}
+function addVariantRow(type='', value='', pm=0, stock=0, images=[]) {
 
+    if (typeof images === "string") {
+        try {
+            images = JSON.parse(images);
+        } catch (e) {
+            images = [];
+        }
+    }
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+        <td><input type="text" list="varTypeDL" value="${type}" style="width:110px"></td>
+
+        <td><input type="text" value="${value}" style="width:100px"></td>
+
+        <td><input type="number" value="${pm}" style="width:80px"></td>
+
+        <td><input type="number" value="${stock}" style="width:70px"></td>
+
+        <td><input type="number" value="0" style="width:50px"></td>
+
+        <td>
+
+            <input
+                type="file"
+                multiple
+                accept="image/*"
+                onchange="uploadVariantImages(this)">
+
+            <input
+                type="hidden"
+                class="variant-images"
+                value='${JSON.stringify(images)}'>
+
+            <div class="variant-preview">
+
+                ${images.map(img => `
+                    <img src="${img}"
+                    style="
+                        width:50px;
+                        height:50px;
+                        object-fit:cover;
+                        margin:3px;
+                        border-radius:5px;
+                    ">
+                `).join("")}
+
+            </div>
+
+        </td>
+
+        <td>
+            <button class="rm-btn"
+                onclick="this.closest('tr').remove()">✕</button>
+        </td>
+    `;
+
+    document.getElementById("variantTb").appendChild(tr);
+}
 function getDList(id) { return [...document.querySelectorAll(`#${id} input`)].map(i=>i.value.trim()).filter(Boolean); }
 function getSpecs() {
   const rows = document.querySelectorAll('#specList .dli'), o = {};
@@ -1088,20 +1184,44 @@ function getSpecs() {
   return o;
 }
 function getVariants() {
-  return [...document.querySelectorAll('#variantTb tr')].map((tr,i) => {
-    const ins = tr.querySelectorAll('input[type=text],input[type=number]');
-    const imgUrl = tr.querySelector('.var-img-url')?.value || '';
-    return {
-      variant_type: ins[0].value.trim(),
-      variant_value: ins[1].value.trim(),
-      price_modifier: parseFloat(ins[2].value)||0,
-      stock: parseInt(ins[3].value)||0,
-      image_url: imgUrl,
-      sort_order: i
-    };
-  }).filter(v => v.variant_type && v.variant_value);
-}
 
+    return [...document.querySelectorAll("#variantTb tr")]
+    .map((tr, i) => {
+
+        const ins = tr.querySelectorAll(
+            "input[type=text],input[type=number]"
+        );
+
+        let images = [];
+
+        try{
+            images = JSON.parse(
+                tr.querySelector(".variant-images")?.value || "[]"
+            );
+        }catch(e){
+            images = [];
+        }
+
+        return {
+
+            variant_type: ins[0].value.trim(),
+
+            variant_value: ins[1].value.trim(),
+
+            price_modifier: parseFloat(ins[2].value) || 0,
+
+            stock: parseInt(ins[3].value) || 0,
+
+            images: images,
+
+            sort_order: i
+
+        };
+
+    })
+    .filter(v => v.variant_type && v.variant_value);
+
+}
 function prevImg(input, previewId) {
   const preview = document.getElementById(previewId);
   preview.innerHTML = "";

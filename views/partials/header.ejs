@@ -83,7 +83,7 @@ function showToast(msg){
 
 /* ── Add to cart (global) ── */
 function addToCart(id,name,price,variant){
-  if(!isLoggedIn()){ window._authCallback=()=>addToCart(id,name,price,variant); showAuthPopup(()=>addToCart(id,name,price,variant)); return; }
+  // if(!isLoggedIn()){ window._authCallback=()=>addToCart(id,name,price,variant); showAuthPopup(()=>addToCart(id,name,price,variant)); return; }
   let cart=JSON.parse(localStorage.getItem('cart')||'[]');
   const key=id+'|'+(variant||'');
   const idx=cart.findIndex(i=>i.key===key);

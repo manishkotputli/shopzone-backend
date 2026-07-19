@@ -12,6 +12,11 @@ const ProductVariant = sequelize.define('ProductVariant', {
   stock:         { type: DataTypes.INTEGER, defaultValue: 0 },
   image_url:     { type: DataTypes.STRING(500), allowNull: true }, // variant-specific image
   sort_order:    { type: DataTypes.INTEGER, defaultValue: 0 },
+  images: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+},
   is_active:     { type: DataTypes.BOOLEAN, defaultValue: true }
 }, { tableName: 'product_variants', timestamps: true, underscored: true,
      indexes: [{ fields: ['product_id'] }, { fields: ['variant_type'] }] });
