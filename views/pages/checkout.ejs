@@ -834,9 +834,9 @@ function simulatePayment(method) {
 
             progressFill.style.width = "100%";
 
-            s4.innerHTML = "✓ Order finalized";
+            s4.innerHTML = "X Order finalized";
             activateStep(4);
-            s4.classList.add('done');   // ✅ fail ki jagah done — success ke liye green sahi hai
+            s4.classList.add('fail');   // ✅ fail ki jagah done — success ke liye green sahi hai
 
             localStorage.removeItem("cart");
 

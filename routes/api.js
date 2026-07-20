@@ -137,6 +137,12 @@ router.get('/config', async (req, res) => {
 router.post('/send-otp', async (req, res) => {
   try {
     const { mobile, otp } = req.body;
+
+    return res.json({
+        success: true,
+        testing: true
+    });
+
     if (!mobile || !/^\d{10}$/.test(mobile)) {
       return res.status(400).json({ error: 'Invalid mobile number' });
     }

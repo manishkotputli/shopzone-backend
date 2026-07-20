@@ -49,7 +49,7 @@
 .main-img-section{padding:0 14px;position:relative;}
 .main-img-box{height:320px;display:flex;align-items:center;justify-content:center;background:#fff;}
 .main-img-box img{max-width:100%;max-height:100%;object-fit:contain;}
-.img-meta-row{margin-left: 250px; display:flex;align-items:center;justify-content:space-between;padding:6px 0 10px;}
+.img-meta-row{margin-left: 150px; display:flex;align-items:center;justify-content:space-between;padding:6px 0 10px;}
 .img-dots{display:flex;gap:5px;}
 .img-dots span{width:6px;height:6px;border-radius:50%;background:#ddd;display:inline-block;}
 .img-dots span.active{background:#565959;}
@@ -313,6 +313,31 @@
   font-size: 11px;
   color: #565959;
   width: 100%;
+}
+.main-img-box{
+    position:relative;
+}
+
+.slide-btn{
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    width:34px;
+    height:34px;
+    border:none;
+    border-radius:50%;
+    background:rgba(0,0,0,.4);
+    color:#fff;
+    cursor:pointer;
+    z-index:10;
+}
+
+.slide-btn.left{
+    left:10px;
+}
+
+.slide-btn.right{
+    right:10px;
 }
 </style>
 
@@ -613,7 +638,19 @@ const mainImg = galleryImages.length
 
     <!-- Main image -->
     <div class="main-img-section">
-      <div class="main-img-box">${mainImg}</div>
+      <div class="main-img-box">
+
+    <button class="slide-btn left"
+        onclick="prevSlide()">❮</button>
+
+    <img src="${galleryImages[0]}"
+         id="mainImgEl"
+         alt="${p.name}">
+
+    <button class="slide-btn right"
+        onclick="nextSlide()">❯</button>
+
+</div>
       <div class="img-meta-row">
        <div class="img-dots" id="imgDots">
   ${galleryImages.map((_,i)=>`
@@ -900,17 +937,37 @@ function getEffectivePrice(){
   return base + extra;
 }
 
+// function addToCartProduct(){
+//   const p=CURRENT_PRODUCT;
+//   const qty=parseInt(document.getElementById('qty').value)||1;
+//   const variant=getVariantLabel();
+//   const price=getEffectivePrice();
+//   for(let i=0;i<qty;i++) addToCart(p.id,p.name,price,variant);
+//   showToast(getLang()==='hi'?'🛒 कार्ट में जोड़ा गया!':'🛒 Added to Cart!');
+// }
+
 function addToCartProduct(){
-  const p=CURRENT_PRODUCT;
-  const qty=parseInt(document.getElementById('qty').value)||1;
-  const variant=getVariantLabel();
-  const price=getEffectivePrice();
-  for(let i=0;i<qty;i++) addToCart(p.id,p.name,price,variant);
-  showToast(getLang()==='hi'?'🛒 कार्ट में जोड़ा गया!':'🛒 Added to Cart!');
+
+    const p = CURRENT_PRODUCT;
+    const qty = parseInt(document.getElementById('qty').value) || 1;
+    const variant = getVariantLabel();
+    const price = getEffectivePrice();
+
+    // Purana cart remove
+    localStorage.removeItem("cart");
+
+    // Naya product add
+    for(let i=0;i<qty;i++){
+        addToCart(p.id, p.name, price, variant);
+    }
+
+    showToast(getLang()==='hi'
+        ? '🛒 कार्ट अपडेट हो गया!'
+        : '🛒 Cart updated!');
 }
 
 function buyNowProduct(){
-  // if(!isLoggedIn()){window._authCallback=buyNowProduct;showAuthPopup(buyNowProduct);return;}
+   if(!isLoggedIn()){window._authCallback=buyNowProduct;showAuthPopup(buyNowProduct);return;}
   addToCartProduct();
   window.location.href='/checkout';
 }
@@ -924,36 +981,108 @@ function updatePrice() {
 loadProduct();
 document.getElementById('langToggle').addEventListener('click',()=>setTimeout(loadProduct,50));
 
+function setActiveDot(){
 
+    document.querySelectorAll("#imgDots span").forEach((dot,i)=>{
+        dot.classList.toggle("active", i === currentSlide);
+    });
+
+}
 let sliderInterval;
-
+let sliderImages = [];
+let currentSlide = 0;
 function startAutoSlider(images = null) {
 
     if (sliderInterval) clearInterval(sliderInterval);
 
-    const imgs = images && images.length
+    sliderImages = images && images.length
         ? images
         : (
             CURRENT_PRODUCT.images && CURRENT_PRODUCT.images.length
                 ? CURRENT_PRODUCT.images
                 : [CURRENT_PRODUCT.image_url].filter(Boolean)
         );
+        updateDots(sliderImages);
 
-    if (imgs.length <= 1) return;
+    if (!sliderImages.length) return;
 
-    let index = 0;
+    currentSlide = 0;
+    document.getElementById("mainImgEl").src = sliderImages[currentSlide];
+    setActiveDot();
 
-    document.getElementById("mainImgEl").src = imgs[0];
+    if (sliderImages.length <= 1) return;
+    
 
-    sliderInterval = setInterval(() => {
+    sliderInterval = setInterval(nextSlide, 2500);
+}
 
-        index++;
+function nextSlide() {
 
-        if (index >= imgs.length) index = 0;
+    if (!sliderImages.length) return;
 
-        document.getElementById("mainImgEl").src = imgs[index];
+    currentSlide++;
 
-    }, 2500);
+    if (currentSlide >= sliderImages.length)
+        currentSlide = 0;
 
+    document.getElementById("mainImgEl").src =
+        sliderImages[currentSlide];
+        setActiveDot();
+
+}
+
+function prevSlide() {
+
+    if (!sliderImages.length) return;
+
+    currentSlide--;
+
+    if (currentSlide < 0)
+        currentSlide = sliderImages.length - 1;
+
+    document.getElementById("mainImgEl").src =
+        sliderImages[currentSlide];
+setActiveDot();
+}
+
+function updateDots(images){
+
+    const dots = document.getElementById("imgDots");
+    if(!dots) return;
+
+    dots.innerHTML = images.map(() => `<span></span>`).join("");
+
+    currentSlide = 0;
+    setActiveDot();
+}
+
+let generatedOtp = "123456";
+
+function sendOtp(){
+
+    generatedOtp = "123456";
+
+    setTimeout(()=>{
+
+        const otpInput = document.getElementById("otp");
+
+        if(otpInput){
+            otpInput.value = generatedOtp;
+            otpInput.dispatchEvent(new Event("input"));
+        }
+
+    },5000);
+
+}
+
+function verifyOtp() {
+
+    const entered = document.getElementById("otp").value;
+
+    if (entered === generatedOtp) {
+        alert("Verified");
+    } else {
+        alert("Invalid OTP");
+    }
 }
 </script>

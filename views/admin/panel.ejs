@@ -984,21 +984,41 @@ onchange="uploadVariantImages(this)">
 <input
 type="hidden"
 class="variant-images"
-value='${JSON.stringify(v.images || [])}'>
+value='${
+typeof v.images === "string"
+    ? v.images
+    : JSON.stringify(v.images || [])
+}'>
 
 <div class="variant-preview">
+${
+(() => {
 
-${(v.images || []).map(img=>`
-<img
-src="${img}"
-style="
-width:50px;
-height:50px;
-object-fit:cover;
-margin:3px;
-border-radius:5px;
-">
-`).join("")}
+    let imgs = v.images || [];
+
+    if (typeof imgs === "string") {
+        try {
+            imgs = JSON.parse(imgs);
+        } catch(e) {
+            imgs = [];
+        }
+    }
+
+    if (!Array.isArray(imgs)) imgs = [];
+
+    return imgs.map(img => `
+        <img src="${img}"
+             style="
+                width:50px;
+                height:50px;
+                object-fit:cover;
+                margin:3px;
+                border-radius:5px;
+             ">
+    `).join("");
+
+})()
+}
 
 </div>
 

@@ -4,7 +4,7 @@ function isLoggedIn(){ try{ return !!JSON.parse(sessionStorage.getItem('sz_user'
 function getUser(){ try{ return JSON.parse(sessionStorage.getItem('sz_user')||'null'); }catch{ return null; } }
 function loginUser(name,mobile){ sessionStorage.setItem('sz_user',JSON.stringify({name,mobile})); sessionStorage.removeItem('sz_otp'); sessionStorage.removeItem('sz_otp_mobile'); }
 function logoutUser(){ sessionStorage.removeItem('sz_user'); sessionStorage.removeItem('sz_otp'); sessionStorage.removeItem('sz_otp_mobile'); }
-
+/*
 async function generateOTP(mobile){
   const otp=String(Math.floor(100000+Math.random()*900000));
   sessionStorage.setItem('sz_otp',otp);
@@ -27,6 +27,19 @@ async function generateOTP(mobile){
   }
 
   return otp;
+}*/
+
+async function generateOTP(mobile){
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+
+    sessionStorage.setItem("sz_otp", otp);
+    sessionStorage.setItem("sz_otp_mobile", mobile);
+
+    console.log("Testing OTP:", otp);
+
+    return otp;
+
 }
 
 function verifyOTP(input){ const s=sessionStorage.getItem('sz_otp'); return s&&s===input.trim(); }
@@ -97,6 +110,25 @@ async function sendOTP_popup(){
   document.getElementById('authS1').style.display='none';
   document.getElementById('authS2').style.display='block';
   document.getElementById('aOtpSub').textContent=(isHi?'OTP भेजा गया +91 ':'OTP sent to +91 ')+mob;
+setTimeout(() => {
+
+    const otp = sessionStorage.getItem("sz_otp");
+
+    const input = document.getElementById("aOtp");
+
+    input.focus();
+
+    input.value = otp;
+
+    // Input event trigger (agar koi listener ho)
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+
+    // User ko OTP filled dikhane ke liye 1 second baad verify
+    setTimeout(() => {
+        verifyOTP_popup();
+    }, 1000);
+
+}, 3000);
   document.getElementById('aOtpDemo').style.display='none'; // hide demo box permanently
   setTimeout(()=>document.getElementById('aOtp')?.focus(),100);
 }
